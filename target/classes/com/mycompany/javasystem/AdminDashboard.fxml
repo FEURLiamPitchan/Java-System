@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mycompany.javasystem.AdminDashboardController"
+            prefHeight="700.0" prefWidth="1100.0"
+            style="-fx-background-color: #f4f4f4;">
+
+    <!-- TOP BAR -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="65"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 0 1 0;
+                     -fx-padding: 0 24;">
+
+            <!-- Logo + Title -->
+            <HBox alignment="CENTER_LEFT" spacing="12" HBox.hgrow="ALWAYS">
+                <Circle radius="18" fill="#2d2d2d"/>
+                <VBox alignment="CENTER_LEFT" spacing="2">
+                    <Label text="Barangay San Isidro"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Management System"
+                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                </VBox>
+            </HBox>
+
+            <!-- Right side -->
+            <HBox alignment="CENTER_RIGHT" spacing="12">
+
+                <!-- Alerts button -->
+                <Button text="🔔  Alerts"
+                        style="-fx-background-color: #f4f4f4;
+                               -fx-text-fill: #333333;
+                               -fx-font-size: 12px;
+                               -fx-background-radius: 20;
+                               -fx-border-radius: 20;
+                               -fx-border-color: #e0e0e0;
+                               -fx-border-width: 1;
+                               -fx-padding: 8 16;
+                               -fx-cursor: hand;"/>
+
+                <!-- User info -->
+                <HBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #f4f4f4;
+                             -fx-background-radius: 20;
+                             -fx-border-radius: 20;
+                             -fx-border-color: #e0e0e0;
+                             -fx-border-width: 1;
+                             -fx-padding: 6 16;">
+                    <Circle radius="14" fill="#2d2d2d"/>
+                    <VBox alignment="CENTER_LEFT" spacing="1">
+                        <Label text="Administrator"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="Admin"
+                               style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                </HBox>
+
+               <!-- Logout -->
+                <Button fx:id="logoutButton" text="← Logout" onAction="#handleLogout"
+                    style="-fx-background-color: #ffffff;
+                        -fx-text-fill: #555555;
+                        -fx-font-size: 12px;
+                        -fx-background-radius: 8;
+                        -fx-border-radius: 8;
+                        -fx-border-color: #e0e0e0;
+                        -fx-border-width: 1;
+                        -fx-padding: 8 16;
+                        -fx-cursor: hand;"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- SIDEBAR -->
+    <left>
+        <VBox prefWidth="220" prefHeight="700"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 1 0 0;
+                     -fx-padding: 20 12;">
+
+            <!-- MAIN section -->
+            <Label text="MAIN"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="?   Dashboard" maxWidth="Infinity"
+                    style="-fx-background-color: #2d2d2d;
+                           -fx-text-fill: #ffffff;
+                           -fx-font-size: 13px;
+                           -fx-font-weight: bold;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="👥   Residents" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📄   Documents" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="💳   Payments" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <!-- COMMUNITY section -->
+            <Label text="COMMUNITY"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="📢   Complaints" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📣   Announcements" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <!-- MANAGEMENT section -->
+            <Label text="MANAGEMENT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="📊   Finance" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="⚙️   Admin" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+        </VBox>
+    </left>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background-color: #f4f4f4;
+                           -fx-background: #f4f4f4;
+                           -fx-border-color: transparent;">
+            <VBox spacing="16" style="-fx-padding: 24;">
+
+                <!-- Welcome banner -->
+                <VBox style="-fx-background-color: #2d2d2d;
+                             -fx-background-radius: 12;
+                             -fx-padding: 28 32;">
+                    <Label text="Good morning, Admin! 👋"
+                           style="-fx-font-size: 22px; -fx-font-weight: bold;
+                                  -fx-text-fill: #ffffff;">
+                        <VBox.margin><Insets bottom="6"/></VBox.margin>
+                    </Label>
+                    <Label text="Welcome to the Barangay San Isidro Management System."
+                           style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;">
+                        <VBox.margin><Insets bottom="4"/></VBox.margin>
+                    </Label>
+                    <Label text="Manage records, process documents, and serve your community efficiently."
+                           style="-fx-font-size: 12px; -fx-text-fill: #777777;">
+                        <VBox.margin><Insets bottom="20"/></VBox.margin>
+                    </Label>
+                    <HBox spacing="12">
+                        <Button text="📄  New Document Request"
+                                style="-fx-background-color: #444444;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 12px;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 10 20;
+                                       -fx-cursor: hand;"/>
+                        <Button text="👥  View Residents"
+                                style="-fx-background-color: #ffffff;
+                                       -fx-text-fill: #2d2d2d;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 10 20;
+                                       -fx-cursor: hand;"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Stats row -->
+                <HBox spacing="16">
+                    <!-- Total Residents -->
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Total Residents"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="6,482"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="↑ +12 this month"
+                               style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
+                    </VBox>
+
+                    <!-- Pending Requests -->
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Pending Requests"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="47"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="↓ 3 urgent"
+                               style="-fx-font-size: 11px; -fx-text-fill: #e53935;"/>
+                    </VBox>
+
+                    <!-- Collection -->
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Collection Today"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="₱38,450"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="↑ 22% vs yesterday"
+                               style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
+                    </VBox>
+
+                    <!-- Open Complaints -->
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Open Complaints"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="12"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="↑ 2 new today"
+                               style="-fx-font-size: 11px; -fx-text-fill: #e53935;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Bottom row -->
+                <HBox spacing="16">
+
+                    <!-- Recent Document Requests -->
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="Recent Document Requests"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #1a1a1a;"
+                                   HBox.hgrow="ALWAYS"/>
+                            <Button text="View All"
+                                    style="-fx-background-color: #f4f4f4;
+                                           -fx-text-fill: #555555;
+                                           -fx-font-size: 11px;
+                                           -fx-background-radius: 6;
+                                           -fx-padding: 6 12;
+                                           -fx-cursor: hand;"/>
+                        </HBox>
+                        <VBox.margin><Insets bottom="12"/></VBox.margin>
+
+                        <!-- Table header -->
+                        <HBox style="-fx-padding: 8 0;
+                                     -fx-border-color: #f0f0f0;
+                                     -fx-border-width: 0 0 1 0;">
+                            <Label text="RESIDENT" prefWidth="160"
+                                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                                          -fx-text-fill: #aaaaaa;"/>
+                            <Label text="TYPE" prefWidth="120"
+                                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                                          -fx-text-fill: #aaaaaa;"/>
+                            <Label text="STATUS" prefWidth="100"
+                                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                                          -fx-text-fill: #aaaaaa;"/>
+                        </HBox>
+
+                        <!-- Rows -->
+                        <HBox style="-fx-padding: 10 0; -fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;">
+                            <Label text="Maria Santos" prefWidth="160"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                            <Label text="Clearance" prefWidth="120"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Pending"
+                                   style="-fx-background-color: #fff8e1;
+                                          -fx-text-fill: #f59e0b;
+                                          -fx-font-size: 10px;
+                                          -fx-font-weight: bold;
+                                          -fx-background-radius: 4;
+                                          -fx-padding: 3 8;"/>
+                        </HBox>
+                        <HBox style="-fx-padding: 10 0; -fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;">
+                            <Label text="Juan dela Cruz" prefWidth="160"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                            <Label text="Residency" prefWidth="120"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Approved"
+                                   style="-fx-background-color: #e8f5e9;
+                                          -fx-text-fill: #4caf50;
+                                          -fx-font-size: 10px;
+                                          -fx-font-weight: bold;
+                                          -fx-background-radius: 4;
+                                          -fx-padding: 3 8;"/>
+                        </HBox>
+                        <HBox style="-fx-padding: 10 0; -fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;">
+                            <Label text="Lorna Reyes" prefWidth="160"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                            <Label text="Indigency" prefWidth="120"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Processing"
+                                   style="-fx-background-color: #e3f2fd;
+                                          -fx-text-fill: #2196f3;
+                                          -fx-font-size: 10px;
+                                          -fx-font-weight: bold;
+                                          -fx-background-radius: 4;
+                                          -fx-padding: 3 8;"/>
+                        </HBox>
+                        <HBox style="-fx-padding: 10 0; -fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;">
+                            <Label text="Ricardo Tan" prefWidth="160"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                            <Label text="Clearance" prefWidth="120"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Released"
+                                   style="-fx-background-color: #f3e5f5;
+                                          -fx-text-fill: #9c27b0;
+                                          -fx-font-size: 10px;
+                                          -fx-font-weight: bold;
+                                          -fx-background-radius: 4;
+                                          -fx-padding: 3 8;"/>
+                        </HBox>
+                        <HBox style="-fx-padding: 10 0;">
+                            <Label text="Ana Bautista" prefWidth="160"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;"/>
+                            <Label text="Residency" prefWidth="120"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Pending"
+                                   style="-fx-background-color: #fff8e1;
+                                          -fx-text-fill: #f59e0b;
+                                          -fx-font-size: 10px;
+                                          -fx-font-weight: bold;
+                                          -fx-background-radius: 4;
+                                          -fx-padding: 3 8;"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Latest Announcements -->
+                    <VBox prefWidth="300"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="Latest Announcements"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #1a1a1a;"
+                                   HBox.hgrow="ALWAYS"/>
+                            <Button text="View All"
+                                    style="-fx-background-color: #f4f4f4;
+                                           -fx-text-fill: #555555;
+                                           -fx-font-size: 11px;
+                                           -fx-background-radius: 6;
+                                           -fx-padding: 6 12;
+                                           -fx-cursor: hand;"/>
+                        </HBox>
+                        <VBox.margin><Insets bottom="16"/></VBox.margin>
+
+                        <!-- Announcement items -->
+                        <VBox style="-fx-border-color: #f0f0f0; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 12 0;">
+                            <Label text="Typhoon Advisory – Signal No. 1"
+                                   style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                          -fx-text-fill: #1a1a1a;">
+                                <VBox.margin><Insets bottom="3"/></VBox.margin>
+                            </Label>
+                            <Label text="Today, 9:00 AM • Urgent"
+                                   style="-fx-font-size: 10px; -fx-text-fill: #e53935;">
+                                <VBox.margin><Insets bottom="4"/></VBox.margin>
+                            </Label>
+                            <Label text="Residents advised to stay indoors."
+                                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"
+                                   wrapText="true"/>
+                            <VBox.margin><Insets bottom="12"/></VBox.margin>
+                        </VBox>
+
+                        <VBox style="-fx-border-color: #f0f0f0; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 12 0;">
+                            <Label text="Free Vaccination Drive – June 15"
+                                   style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                          -fx-text-fill: #1a1a1a;">
+                                <VBox.margin><Insets bottom="3"/></VBox.margin>
+                            </Label>
+                            <Label text="June 12 • Health"
+                                   style="-fx-font-size: 10px; -fx-text-fill: #4caf50;">
+                                <VBox.margin><Insets bottom="4"/></VBox.margin>
+                            </Label>
+                            <Label text="Anti-flu vaccines at Barangay Health Center."
+                                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"
+                                   wrapText="true"/>
+                            <VBox.margin><Insets bottom="12"/></VBox.margin>
+                        </VBox>
+
+                        <VBox>
+                            <Label text="Monthly Barangay Assembly"
+                                   style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                          -fx-text-fill: #1a1a1a;">
+                                <VBox.margin><Insets bottom="3"/></VBox.margin>
+                            </Label>
+                            <Label text="June 10 • General"
+                                   style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;">
+                                <VBox.margin><Insets bottom="4"/></VBox.margin>
+                            </Label>
+                            <Label text="All residents are invited."
+                                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"
+                                   wrapText="true"/>
+                        </VBox>
+
+                    </VBox>
+                </HBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

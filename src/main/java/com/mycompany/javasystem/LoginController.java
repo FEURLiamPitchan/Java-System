@@ -30,8 +30,15 @@ public class LoginController {
 
         // TODO: Replace with actual database authentication
         if (email.equals("admin@barangay.com") && password.equals("admin123")) {
-            System.out.println("Login successful!");
-            // TODO: Load dashboard here
+            try {
+                Parent root = FXMLLoader.load(getClass().getResource("AdminDashboard.fxml"));
+                Stage stage = (Stage) emailField.getScene().getWindow();
+                stage.setScene(new Scene(root, 1100, 700));
+                stage.show();
+            } catch (Exception e) {
+                e.printStackTrace();
+                showError("Error loading dashboard.");
+            }
         } else {
             showError("Invalid email or password.");
         }
