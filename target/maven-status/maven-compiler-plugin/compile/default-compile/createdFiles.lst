@@ -1,4 +1,4 @@
-com\mycompany\javasystem\PrimaryController.class
-com\mycompany\javasystem\SecondaryController.class
+com\mycompany\javasystem\RegisterController.class
 module-info.class
 com\mycompany\javasystem\App.class
+com\mycompany\javasystem\LoginController.class
