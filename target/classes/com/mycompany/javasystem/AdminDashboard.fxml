@@ -13,7 +13,7 @@
 
     <!-- TOP BAR -->
     <top>
-        <HBox alignment="CENTER_LEFT" prefHeight="65"
+        <HBox alignment="CENTER_LEFT" prefHeight="65"       
               style="-fx-background-color: #ffffff;
                      -fx-border-color: #e8e8e8;
                      -fx-border-width: 0 0 1 0;
@@ -92,7 +92,7 @@
                    style="-fx-font-size: 10px; -fx-font-weight: bold;
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
-            <Button text="?   Dashboard" maxWidth="Infinity"
+            <Button text="🏠   Dashboard" maxWidth="Infinity"
                     style="-fx-background-color: #2d2d2d;
                            -fx-text-fill: #ffffff;
                            -fx-font-size: 13px;
@@ -105,6 +105,7 @@
             </Button>
 
             <Button text="👥   Residents" maxWidth="Infinity"
+                    onAction = "#goToResidents"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;

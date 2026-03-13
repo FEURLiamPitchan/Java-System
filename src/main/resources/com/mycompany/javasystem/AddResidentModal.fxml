@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.mycompany.javasystem.AddResidentController"
+      prefWidth="480"
+      style="-fx-background-color: #ffffff;
+             -fx-background-radius: 12;
+             -fx-padding: 32;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT">
+        <VBox.margin><Insets bottom="24"/></VBox.margin>
+        <VBox HBox.hgrow="ALWAYS" spacing="4">
+            <Label text="Add Resident"
+                   style="-fx-font-size: 18px; -fx-font-weight: bold;
+                          -fx-text-fill: #1a1a1a;"/>
+            <Label text="Fill in the details to register a new resident"
+                   style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
+        </VBox>
+        <Button text="✕" onAction="#handleClose"
+                style="-fx-background-color: #f4f4f4;
+                       -fx-text-fill: #555555;
+                       -fx-font-size: 12px;
+                       -fx-background-radius: 6;
+                       -fx-border-radius: 6;
+                       -fx-padding: 6 10;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+    <!-- Resident ID -->
+    <Label text="RESIDENT ID"
+           style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;">
+        <VBox.margin><Insets bottom="6"/></VBox.margin>
+    </Label>
+    <TextField fx:id="residentIdField" promptText="e.g. RES-0001"
+               maxWidth="Infinity"
+               style="-fx-background-color: #f9f9f9;
+                      -fx-background-radius: 8;
+                      -fx-border-radius: 8;
+                      -fx-border-color: #e8e8e8;
+                      -fx-border-width: 1;
+                      -fx-padding: 11 14;
+                      -fx-font-size: 13px;
+                      -fx-text-fill: #1a1a1a;
+                      -fx-prompt-text-fill: #cccccc;">
+        <VBox.margin><Insets bottom="16"/></VBox.margin>
+    </TextField>
+
+    <!-- Full Name -->
+    <Label text="FULL NAME"
+           style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;">
+        <VBox.margin><Insets bottom="6"/></VBox.margin>
+    </Label>
+    <TextField fx:id="fullNameField" promptText="e.g. Juan Dela Cruz"
+               maxWidth="Infinity"
+               style="-fx-background-color: #f9f9f9;
+                      -fx-background-radius: 8;
+                      -fx-border-radius: 8;
+                      -fx-border-color: #e8e8e8;
+                      -fx-border-width: 1;
+                      -fx-padding: 11 14;
+                      -fx-font-size: 13px;
+                      -fx-text-fill: #1a1a1a;
+                      -fx-prompt-text-fill: #cccccc;">
+        <VBox.margin><Insets bottom="16"/></VBox.margin>
+    </TextField>
+
+    <!-- Age and Status row -->
+    <HBox spacing="12">
+        <VBox.margin><Insets bottom="16"/></VBox.margin>
+        <VBox HBox.hgrow="ALWAYS" spacing="6">
+            <Label text="AGE"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+            <TextField fx:id="ageField" promptText="e.g. 25"
+                       maxWidth="Infinity"
+                       style="-fx-background-color: #f9f9f9;
+                              -fx-background-radius: 8;
+                              -fx-border-radius: 8;
+                              -fx-border-color: #e8e8e8;
+                              -fx-border-width: 1;
+                              -fx-padding: 11 14;
+                              -fx-font-size: 13px;
+                              -fx-text-fill: #1a1a1a;
+                              -fx-prompt-text-fill: #cccccc;"/>
+        </VBox>
+        <VBox HBox.hgrow="ALWAYS" spacing="6">
+            <Label text="STATUS"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+            <ComboBox fx:id="statusCombo" maxWidth="Infinity"
+                      promptText="Select status"
+                      style="-fx-background-color: #f9f9f9;
+                             -fx-background-radius: 8;
+                             -fx-border-radius: 8;
+                             -fx-border-color: #e8e8e8;
+                             -fx-border-width: 1;
+                             -fx-font-size: 13px;
+                             -fx-padding: 3 0;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Address -->
+    <Label text="ADDRESS"
+           style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;">
+        <VBox.margin><Insets bottom="6"/></VBox.margin>
+    </Label>
+    <TextField fx:id="addressField" promptText="e.g. 123 Rizal St., San Isidro"
+               maxWidth="Infinity"
+               style="-fx-background-color: #f9f9f9;
+                      -fx-background-radius: 8;
+                      -fx-border-radius: 8;
+                      -fx-border-color: #e8e8e8;
+                      -fx-border-width: 1;
+                      -fx-padding: 11 14;
+                      -fx-font-size: 13px;
+                      -fx-text-fill: #1a1a1a;
+                      -fx-prompt-text-fill: #cccccc;">
+        <VBox.margin><Insets bottom="24"/></VBox.margin>
+    </TextField>
+
+    <!-- Message label -->
+    <Label fx:id="messageLabel" text=""
+           style="-fx-font-size: 11px;">
+        <VBox.margin><Insets bottom="16"/></VBox.margin>
+    </Label>
+
+    <!-- Buttons -->
+    <HBox spacing="12" alignment="CENTER_RIGHT">
+        <Button text="Cancel" onAction="#handleClose"
+                style="-fx-background-color: #f4f4f4;
+                       -fx-text-fill: #555555;
+                       -fx-font-size: 13px;
+                       -fx-background-radius: 8;
+                       -fx-border-radius: 8;
+                       -fx-border-color: #e0e0e0;
+                       -fx-border-width: 1;
+                       -fx-padding: 10 24;
+                       -fx-cursor: hand;"/>
+        <Button text="Add Resident" onAction="#handleSubmit"
+                style="-fx-background-color: #2d2d2d;
+                       -fx-text-fill: #ffffff;
+                       -fx-font-size: 13px;
+                       -fx-font-weight: bold;
+                       -fx-background-radius: 8;
+                       -fx-border-radius: 8;
+                       -fx-padding: 10 24;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+</VBox>
