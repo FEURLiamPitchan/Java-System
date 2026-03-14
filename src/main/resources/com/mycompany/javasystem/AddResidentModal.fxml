@@ -49,8 +49,12 @@
                       -fx-font-size: 13px;
                       -fx-text-fill: #1a1a1a;
                       -fx-prompt-text-fill: #cccccc;">
-        <VBox.margin><Insets bottom="16"/></VBox.margin>
+        <VBox.margin><Insets bottom="4"/></VBox.margin>
     </TextField>
+    <Label fx:id="suggestedIdLabel" text=""
+           style="-fx-font-size: 10px; -fx-text-fill: #4caf50;">
+        <VBox.margin><Insets bottom="16"/></VBox.margin>
+    </Label>
 
     <!-- Full Name -->
     <Label text="FULL NAME"

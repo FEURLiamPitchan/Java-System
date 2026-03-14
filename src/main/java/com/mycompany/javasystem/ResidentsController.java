@@ -45,6 +45,7 @@ public class ResidentsController {
 
             ResultSet rs = stmt.executeQuery();
             boolean hasData = false;
+            int rowNumber = 1;
 
             while (rs.next()) {
                 hasData = true;
@@ -53,11 +54,13 @@ public class ResidentsController {
                 int age = rs.getInt("age");
                 String address = rs.getString("address");
                 String status = rs.getString("status");
+                String dateAdded = rs.getString("date_added") != null
+                        ? rs.getString("date_added") : "N/A";
 
                 HBox row = new HBox();
                 row.setStyle("-fx-padding: 12 0; -fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;");
 
-                Label idLabel = new Label(residentId);
+                Label idLabel = new Label(String.valueOf(rowNumber));
                 idLabel.setPrefWidth(100);
                 idLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
@@ -90,8 +93,38 @@ public class ResidentsController {
                         "-fx-padding: 5 12;" +
                         "-fx-cursor: hand;");
 
+                final String fResidentId = residentId;
+                final String fFullName = fullName;
+                final int fAge = age;
+                final String fAddress = address;
+                final String fStatus = status;
+                final String fDateAdded = dateAdded;
+
+                viewBtn.setOnAction(e -> {
+                    try {
+                        FXMLLoader loader = new FXMLLoader(getClass().getResource("ViewResidentModal.fxml"));
+                        Parent modalRoot = loader.load();
+
+                        ViewResidentController viewController = loader.getController();
+                        viewController.setResident(fResidentId, fFullName, fAge, fAddress, fStatus, fDateAdded);
+                        viewController.setOnDelete(() -> loadResidents(""));
+
+                        Stage modalStage = new Stage();
+                        modalStage.initModality(Modality.APPLICATION_MODAL);
+                        modalStage.initOwner(logoutButton.getScene().getWindow());
+                        modalStage.setTitle("View Resident");
+                        modalStage.setScene(new Scene(modalRoot));
+                        modalStage.setResizable(false);
+                        modalStage.showAndWait();
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+
                 row.getChildren().addAll(idLabel, nameLabel, ageLabel, addressLabel, statusLabel, viewBtn);
                 residentsTableBody.getChildren().add(row);
+                rowNumber++;
             }
 
             if (!hasData) {
@@ -150,5 +183,10 @@ public class ResidentsController {
     private void handleLogout() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "login.fxml", false, getClass());
+    }
+        @FXML
+    private void goToDocuments() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Documents.fxml", true, getClass());
     }
 }

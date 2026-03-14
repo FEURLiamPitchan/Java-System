@@ -4,6 +4,8 @@ com\mycompany\javasystem\RegisterController.class
 com\mycompany\javasystem\ResidentsController.class
 com\mycompany\javasystem\DatabaseConnection.class
 module-info.class
+com\mycompany\javasystem\DocumentsController.class
 com\mycompany\javasystem\App.class
 com\mycompany\javasystem\AdminDashboardController.class
 com\mycompany\javasystem\SceneTransition.class
+com\mycompany\javasystem\ViewResidentController.class

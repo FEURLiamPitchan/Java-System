@@ -117,6 +117,7 @@
             </Button>
 
             <Button text="📄   Documents" maxWidth="Infinity"
+                    onAction="#goToDocuments"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
