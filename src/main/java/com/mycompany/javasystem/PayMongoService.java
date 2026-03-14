@@ -10,7 +10,7 @@ import java.util.Base64;
 
 public class PayMongoService {
 
-    private static final String SECRET_KEY = "sk_test_wxooREqwAJ3qSFcAhiP4PWas";
+    private static final String SECRET_KEY = System.getenv("PAYMONGO_SECRET_KEY");
     private static final String BASE_URL = "https://api.paymongo.com/v1";
     private static final OkHttpClient client = new OkHttpClient();
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
