@@ -7,7 +7,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.mycompany.javasystem.ResidentsController"
+            fx:controller="com.mycompany.javasystem.ComplaintsController"
             prefHeight="700.0" prefWidth="1100.0"
             style="-fx-background-color: #f4f4f4;"
             stylesheets="@style.css">
@@ -30,16 +30,27 @@
                 </VBox>
             </HBox>
             <HBox alignment="CENTER_RIGHT" spacing="12">
-                <Button text="🔔  Alerts"
-                        style="-fx-background-color: #f4f4f4;
-                               -fx-text-fill: #333333;
-                               -fx-font-size: 12px;
-                               -fx-background-radius: 20;
-                               -fx-border-radius: 20;
-                               -fx-border-color: #e0e0e0;
-                               -fx-border-width: 1;
-                               -fx-padding: 8 16;
-                               -fx-cursor: hand;"/>
+                <StackPane>
+                    <Button fx:id="alertsButton" text="🔔  Alerts" onAction="#handleAlerts"
+                            style="-fx-background-color: #f4f4f4;
+                                   -fx-text-fill: #333333;
+                                   -fx-font-size: 12px;
+                                   -fx-background-radius: 20;
+                                   -fx-border-radius: 20;
+                                   -fx-border-color: #e0e0e0;
+                                   -fx-border-width: 1;
+                                   -fx-padding: 8 16;
+                                   -fx-cursor: hand;"/>
+                    <Label fx:id="alertBadge" text="0"
+                           style="-fx-background-color: #e53935;
+                                  -fx-text-fill: #ffffff;
+                                  -fx-font-size: 9px;
+                                  -fx-font-weight: bold;
+                                  -fx-background-radius: 10;
+                                  -fx-padding: 1 4;"
+                           StackPane.alignment="TOP_RIGHT"
+                           visible="false"/>
+                </StackPane>
                 <HBox alignment="CENTER" spacing="8"
                       style="-fx-background-color: #f4f4f4;
                              -fx-background-radius: 20;
@@ -94,7 +105,8 @@
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
-            <Button text="👥   Residents" maxWidth="Infinity" 
+            <Button text="👥   Residents" maxWidth="Infinity"
+                    onAction="#goToResidents" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
@@ -119,10 +131,9 @@
 
             <Button text="💳   Payments" maxWidth="Infinity"
                     onAction="#goToPayments" focusTraversable="false"
-                    style="-fx-background-color: #2d2d2d;
-                           -fx-text-fill: #ffffff;
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
                            -fx-font-size: 13px;
-                           -fx-font-weight: bold;
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
@@ -132,8 +143,8 @@
 
             <Button text="    📁   Archive" maxWidth="Infinity"
                     onAction="#goToArchive" focusTraversable="false"
-                    style="-fx-background-color: #f4f4f4;
-                           -fx-text-fill: #555555;
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #777777;
                            -fx-font-size: 12px;
                            -fx-background-radius: 8;
                            -fx-padding: 9 16;
@@ -147,11 +158,11 @@
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
             <Button text="📢   Complaints" maxWidth="Infinity"
-                    onAction="#goToComplaints"
                     focusTraversable="false"
-                    style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
+                    style="-fx-background-color: #2d2d2d;
+                           -fx-text-fill: #ffffff;
                            -fx-font-size: 13px;
+                           -fx-font-weight: bold;
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
@@ -160,7 +171,7 @@
             </Button>
 
             <Button text="📣   Announcements" maxWidth="Infinity"
-                    focusTraversable="false"
+                    onAction="#goToAnnouncements" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
@@ -209,27 +220,14 @@
             <!-- Header -->
             <HBox alignment="CENTER_LEFT">
                 <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Payments"
+                    <Label text="Complaints &amp; Incidents"
                            style="-fx-font-size: 22px; -fx-font-weight: bold;
                                   -fx-text-fill: #1a1a1a;">
                         <VBox.margin><Insets bottom="4"/></VBox.margin>
                     </Label>
-                    <Label text="Manage and verify resident payments"
+                    <Label text="Manage and respond to resident complaints"
                            style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
                 </VBox>
-            </HBox>
-
-            <!-- TEMP TEST BUTTON -->
-            <HBox>
-                <Button text="🧪 Create Test Payment" onAction="#createTestPayment"
-                        focusTraversable="false"
-                        style="-fx-background-color: #e3f2fd;
-                               -fx-text-fill: #1e88e5;
-                               -fx-font-size: 12px;
-                               -fx-font-weight: bold;
-                               -fx-background-radius: 8;
-                               -fx-padding: 10 20;
-                               -fx-cursor: hand;"/>
             </HBox>
 
             <!-- Summary Cards -->
@@ -240,17 +238,17 @@
                              -fx-border-color: #eeeeee;
                              -fx-border-width: 1;
                              -fx-padding: 20;">
-                    <Label text="Total Collected"
+                    <Label text="Total Complaints"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
                     </Label>
-                    <Label fx:id="totalCollectedLabel" text="₱0.00"
+                    <Label fx:id="totalLabel" text="0"
                            style="-fx-font-size: 26px; -fx-font-weight: bold;
                                   -fx-text-fill: #1a1a1a;">
                         <VBox.margin><Insets bottom="4"/></VBox.margin>
                     </Label>
                     <Label text="All time"
-                           style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
+                           style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
                 </VBox>
                 <VBox HBox.hgrow="ALWAYS"
                       style="-fx-background-color: #ffffff;
@@ -258,16 +256,16 @@
                              -fx-border-color: #eeeeee;
                              -fx-border-width: 1;
                              -fx-padding: 20;">
-                    <Label text="Pending Payments"
+                    <Label text="Pending"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
                     </Label>
-                    <Label fx:id="pendingCountLabel" text="0"
+                    <Label fx:id="pendingLabel" text="0"
                            style="-fx-font-size: 26px; -fx-font-weight: bold;
                                   -fx-text-fill: #1a1a1a;">
                         <VBox.margin><Insets bottom="4"/></VBox.margin>
                     </Label>
-                    <Label text="Awaiting payment"
+                    <Label text="Awaiting review"
                            style="-fx-font-size: 11px; -fx-text-fill: #f59e0b;"/>
                 </VBox>
                 <VBox HBox.hgrow="ALWAYS"
@@ -276,16 +274,34 @@
                              -fx-border-color: #eeeeee;
                              -fx-border-width: 1;
                              -fx-padding: 20;">
-                    <Label text="Paid"
+                    <Label text="Under Review"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
                     </Label>
-                    <Label fx:id="paidCountLabel" text="0"
+                    <Label fx:id="underReviewLabel" text="0"
                            style="-fx-font-size: 26px; -fx-font-weight: bold;
                                   -fx-text-fill: #1a1a1a;">
                         <VBox.margin><Insets bottom="4"/></VBox.margin>
                     </Label>
-                    <Label text="Completed payments"
+                    <Label text="Being processed"
+                           style="-fx-font-size: 11px; -fx-text-fill: #1e88e5;"/>
+                </VBox>
+                <VBox HBox.hgrow="ALWAYS"
+                      style="-fx-background-color: #ffffff;
+                             -fx-background-radius: 10;
+                             -fx-border-color: #eeeeee;
+                             -fx-border-width: 1;
+                             -fx-padding: 20;">
+                    <Label text="Resolved"
+                           style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                        <VBox.margin><Insets bottom="6"/></VBox.margin>
+                    </Label>
+                    <Label fx:id="resolvedLabel" text="0"
+                           style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;">
+                        <VBox.margin><Insets bottom="4"/></VBox.margin>
+                    </Label>
+                    <Label text="Completed"
                            style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
                 </VBox>
             </HBox>
@@ -300,7 +316,8 @@
                              -fx-padding: 10 16;">
                     <Label text="🔍 "
                            style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;"/>
-                    <TextField fx:id="searchField" promptText="Search by name or reference number..."
+                    <TextField fx:id="searchField"
+                               promptText="Search by name or complaint ID..."
                                HBox.hgrow="ALWAYS"
                                style="-fx-background-color: transparent;
                                       -fx-border-color: transparent;
@@ -309,6 +326,15 @@
                                onKeyReleased="#handleSearch"/>
                 </HBox>
                 <ComboBox fx:id="filterStatus" promptText="Filter by status"
+                          onAction="#handleFilter"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-border-radius: 10;
+                                 -fx-background-radius: 10;
+                                 -fx-font-size: 12px;
+                                 -fx-padding: 4;"/>
+                <ComboBox fx:id="filterType" promptText="Filter by type"
                           onAction="#handleFilter"
                           style="-fx-background-color: #ffffff;
                                  -fx-border-color: #eeeeee;
@@ -331,25 +357,25 @@
                              -fx-border-width: 0 0 1 0;
                              -fx-background-color: #fafafa;
                              -fx-background-radius: 10 10 0 0;">
-                    <Label text="PAY #" prefWidth="120"
+                    <Label text="ID" prefWidth="100"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="RESIDENT" prefWidth="200"
+                    <Label text="COMPLAINANT" prefWidth="180"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="PAYMENT TYPE" prefWidth="180"
+                    <Label text="INCIDENT TYPE" prefWidth="160"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="AMOUNT" prefWidth="120"
+                    <Label text="LOCATION" prefWidth="160"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="DATE" prefWidth="140"
+                    <Label text="DATE FILED" prefWidth="120"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
                     <Label text="STATUS" prefWidth="120"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="ACTION" prefWidth="180"
+                    <Label text="ACTION" prefWidth="150"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
                 </HBox>
@@ -359,8 +385,8 @@
                             style="-fx-background-color: transparent;
                                    -fx-background: transparent;
                                    -fx-border-color: transparent;">
-                    <VBox fx:id="paymentsTableBody" style="-fx-padding: 0 16;">
-                        <Label text="No payments found."
+                    <VBox fx:id="complaintsTableBody" style="-fx-padding: 0 16;">
+                        <Label text="No complaints found."
                                style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;
                                       -fx-padding: 20 0;">
                             <VBox.margin><Insets top="20" bottom="20"/></VBox.margin>

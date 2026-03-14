@@ -259,10 +259,25 @@ public class DocumentsController {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Residents.fxml", true, getClass());
     }
+    @FXML
+    private void goToPayments() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Payments.fxml", true, getClass());
+    }
+    @FXML
+    private void goToArchive() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "PaymentArchive.fxml", true, getClass());
+    }
 
     @FXML
     private void handleLogout() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "login.fxml", false, getClass());
+    }
+    @FXML
+    private void goToComplaints() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Complaints.fxml", true, getClass());
     }
 }

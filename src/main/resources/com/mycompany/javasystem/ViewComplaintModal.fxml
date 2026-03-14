@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.mycompany.javasystem.ViewComplaintController"
+      prefWidth="520"
+      style="-fx-background-color: #ffffff;
+             -fx-padding: 32;">
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT">
+        <VBox.margin><Insets bottom="20"/></VBox.margin>
+        <VBox HBox.hgrow="ALWAYS" spacing="4">
+            <Label text="Complaint Details"
+                   style="-fx-font-size: 18px; -fx-font-weight: bold;
+                          -fx-text-fill: #1a1a1a;"/>
+            <Label fx:id="complaintIdLabel"
+                   style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
+        </VBox>
+        <Button text="✕" onAction="#handleClose"
+                style="-fx-background-color: #f4f4f4;
+                       -fx-text-fill: #555555;
+                       -fx-font-size: 12px;
+                       -fx-background-radius: 6;
+                       -fx-padding: 6 10;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+    <!-- Info Grid -->
+    <HBox spacing="12">
+        <VBox.margin><Insets bottom="12"/></VBox.margin>
+        <VBox HBox.hgrow="ALWAYS" spacing="3"
+              style="-fx-background-color: #fafafa;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #f0f0f0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
+            <Label text="COMPLAINANT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+            <Label fx:id="nameLabel"
+                   style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+        <VBox HBox.hgrow="ALWAYS" spacing="3"
+              style="-fx-background-color: #fafafa;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #f0f0f0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
+            <Label text="INCIDENT TYPE"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+            <Label fx:id="typeLabel"
+                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+    </HBox>
+
+    <HBox spacing="12">
+        <VBox.margin><Insets bottom="12"/></VBox.margin>
+        <VBox HBox.hgrow="ALWAYS" spacing="3"
+              style="-fx-background-color: #fafafa;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #f0f0f0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
+            <Label text="LOCATION"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+            <Label fx:id="locationLabel"
+                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+        <VBox HBox.hgrow="ALWAYS" spacing="3"
+              style="-fx-background-color: #fafafa;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #f0f0f0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
+            <Label text="DATE FILED"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+            <Label fx:id="dateLabel"
+                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Incident Details -->
+    <VBox spacing="3"
+          style="-fx-background-color: #fafafa;
+                 -fx-background-radius: 8;
+                 -fx-border-color: #f0f0f0;
+                 -fx-border-width: 1;
+                 -fx-border-radius: 8;
+                 -fx-padding: 14 16;">
+        <VBox.margin><Insets bottom="12"/></VBox.margin>
+        <Label text="INCIDENT DETAILS"
+               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+        <Label fx:id="detailsLabel"
+               style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a;"
+               wrapText="true"/>
+    </VBox>
+
+    <!-- Photo -->
+    <VBox spacing="3"
+          style="-fx-background-color: #fafafa;
+                 -fx-background-radius: 8;
+                 -fx-border-color: #f0f0f0;
+                 -fx-border-width: 1;
+                 -fx-border-radius: 8;
+                 -fx-padding: 14 16;">
+        <VBox.margin><Insets bottom="12"/></VBox.margin>
+        <Label text="PHOTO EVIDENCE"
+               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+        <Label fx:id="photoLabel"
+               style="-fx-font-size: 12px; -fx-text-fill: #555555;"
+               wrapText="true"/>
+    </VBox>
+
+    <!-- Status Update -->
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <VBox.margin><Insets bottom="12"/></VBox.margin>
+        <Label text="Update Status:"
+               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+        <ComboBox fx:id="statusCombo"
+                  style="-fx-font-size: 12px;
+                         -fx-background-radius: 8;
+                         -fx-border-radius: 8;
+                         -fx-border-color: #e0e0e0;
+                         -fx-border-width: 1;
+                         -fx-padding: 4;"/>
+    </HBox>
+
+    <!-- Admin Response -->
+    <VBox spacing="6">
+        <VBox.margin><Insets bottom="20"/></VBox.margin>
+        <Label text="ADMIN RESPONSE"
+               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+        <TextArea fx:id="responseArea"
+                  promptText="Write your response to this complaint..."
+                  prefHeight="80"
+                  wrapText="true"
+                  style="-fx-background-color: #fafafa;
+                         -fx-border-color: #e0e0e0;
+                         -fx-border-width: 1;
+                         -fx-border-radius: 8;
+                         -fx-background-radius: 8;
+                         -fx-font-size: 12px;
+                         -fx-padding: 10;"/>
+    </VBox>
+
+    <!-- Buttons -->
+    <HBox spacing="12" alignment="CENTER_RIGHT">
+        <Button text="Save Changes" onAction="#handleSave"
+                style="-fx-background-color: #2d2d2d;
+                       -fx-text-fill: #ffffff;
+                       -fx-font-size: 13px;
+                       -fx-font-weight: bold;
+                       -fx-background-radius: 8;
+                       -fx-padding: 10 24;
+                       -fx-cursor: hand;"/>
+        <Button text="Close" onAction="#handleClose"
+                style="-fx-background-color: #f4f4f4;
+                       -fx-text-fill: #555555;
+                       -fx-font-size: 13px;
+                       -fx-background-radius: 8;
+                       -fx-padding: 10 24;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+</VBox>

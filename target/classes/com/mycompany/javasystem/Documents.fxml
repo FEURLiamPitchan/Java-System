@@ -90,7 +90,7 @@
                         onAction="#goToDashboard"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;
@@ -104,7 +104,7 @@
                         onAction="#goToResidents"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;
@@ -117,7 +117,7 @@
                 <Button text="📄   Documents" maxWidth="Infinity"
                         style="-fx-background-color: #2d2d2d;
                                -fx-text-fill: #ffffff;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-font-weight: bold;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
@@ -129,15 +129,26 @@
                 </Button>
 
                 <Button text="💳   Payments" maxWidth="Infinity"
+                        onAction="#goToPayments" focusTraversable="false"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;
-                               -fx-cursor: hand;
-                               -fx-focus-color: transparent;
-                               -fx-faint-focus-color: transparent;">
+                               -fx-cursor: hand;">
+                    <VBox.margin><Insets bottom="4"/></VBox.margin>
+                </Button>
+
+                <Button text="    📁   Archive" maxWidth="Infinity"
+                        onAction="#goToArchive" focusTraversable="false"
+                        style="-fx-background-color: transparent;
+                               -fx-text-fill: #777777;
+                               -fx-font-size: 12px;
+                               -fx-background-radius: 8;
+                               -fx-padding: 9 16;
+                               -fx-alignment: CENTER_LEFT;
+                               -fx-cursor: hand;">
                     <VBox.margin><Insets bottom="16"/></VBox.margin>
                 </Button>
 
@@ -146,9 +157,10 @@
                               -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
                 <Button text="📢   Complaints" maxWidth="Infinity"
+                        onAction="#goToComplaints"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;
@@ -161,7 +173,7 @@
                 <Button text="📣   Announcements" maxWidth="Infinity"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;
@@ -178,7 +190,7 @@
                 <Button text="📊   Finance" maxWidth="Infinity"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;
@@ -191,7 +203,7 @@
                 <Button text="⚙️   Admin" maxWidth="Infinity"
                         style="-fx-background-color: transparent;
                                -fx-text-fill: #555555;
-                               -fx-font-size: 14px;
+                               -fx-font-size: 13px;
                                -fx-background-radius: 8;
                                -fx-padding: 11 16;
                                -fx-alignment: CENTER_LEFT;

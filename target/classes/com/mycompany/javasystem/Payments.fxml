@@ -7,7 +7,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.mycompany.javasystem.ResidentsController"
+            fx:controller="com.mycompany.javasystem.PaymentsController"
             prefHeight="700.0" prefWidth="1100.0"
             style="-fx-background-color: #f4f4f4;"
             stylesheets="@style.css">
@@ -94,7 +94,8 @@
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
-            <Button text="👥   Residents" maxWidth="Infinity" 
+            <Button text="👥   Residents" maxWidth="Infinity"
+                    onAction="#goToResidents" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
@@ -118,7 +119,7 @@
             </Button>
 
             <Button text="💳   Payments" maxWidth="Infinity"
-                    onAction="#goToPayments" focusTraversable="false"
+                    focusTraversable="false"
                     style="-fx-background-color: #2d2d2d;
                            -fx-text-fill: #ffffff;
                            -fx-font-size: 13px;

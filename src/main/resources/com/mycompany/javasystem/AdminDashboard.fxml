@@ -129,11 +129,24 @@
             </Button>
 
             <Button text="💳   Payments" maxWidth="Infinity"
+                    onAction="#goToPayments" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="    📁   Archive" maxWidth="Infinity"
+                    onAction="#goToArchive" focusTraversable="false"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #777777;
+                           -fx-font-size: 12px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 9 16;
                            -fx-alignment: CENTER_LEFT;
                            -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="16"/></VBox.margin>
@@ -145,6 +158,7 @@
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
             <Button text="📢   Complaints" maxWidth="Infinity"
+                    onAction="#goToComplaints"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
