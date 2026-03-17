@@ -161,6 +161,7 @@
             </Button>
 
             <Button text="📣   Announcements" maxWidth="Infinity"
+                    onAction="#goToAnnouncements"
                     focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
@@ -177,7 +178,7 @@
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
             <Button text="📊   Finance" maxWidth="Infinity"
-                    focusTraversable="false"
+                    onAction="#goToFinances" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;

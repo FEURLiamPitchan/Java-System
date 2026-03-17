@@ -96,60 +96,45 @@
             <Button text="🏠   Dashboard" maxWidth="Infinity"
                     onAction="#goToDashboard" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
             <Button text="👥   Residents" maxWidth="Infinity"
                     onAction="#goToResidents" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
             <Button text="📄   Documents" maxWidth="Infinity"
                     onAction="#goToDocuments" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
             <Button text="💳   Payments" maxWidth="Infinity"
                     onAction="#goToPayments" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
             <Button text="    📁   Archive" maxWidth="Infinity"
                     onAction="#goToArchive" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #777777;
-                           -fx-font-size: 12px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 9 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #777777; -fx-font-size: 12px;
+                           -fx-background-radius: 8; -fx-padding: 9 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="16"/></VBox.margin>
             </Button>
 
@@ -158,14 +143,11 @@
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
             <Button text="📢   Complaints" maxWidth="Infinity"
-                    focusTraversable="false"
+                    onAction="#goToAnnouncements" focusTraversable="false"
                     style="-fx-background-color: #2d2d2d;
-                           -fx-text-fill: #ffffff;
-                           -fx-font-size: 13px;
-                           -fx-font-weight: bold;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
+                           -fx-text-fill: #ffffff; -fx-font-size: 13px;
+                           -fx-font-weight: bold; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT;
                            -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
@@ -173,12 +155,9 @@
             <Button text="📣   Announcements" maxWidth="Infinity"
                     onAction="#goToAnnouncements" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="16"/></VBox.margin>
             </Button>
 
@@ -187,26 +166,20 @@
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
             <Button text="📊   Finance" maxWidth="Infinity"
-                    focusTraversable="false"
+                    onAction="#goToFinances" focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
             <Button text="⚙️   Admin" maxWidth="Infinity"
                     focusTraversable="false"
                     style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
-                           -fx-font-size: 13px;
-                           -fx-background-radius: 8;
-                           -fx-padding: 11 16;
-                           -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-text-fill: #555555; -fx-font-size: 13px;
+                           -fx-background-radius: 8; -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
@@ -215,7 +188,8 @@
 
     <!-- MAIN CONTENT -->
     <center>
-        <VBox spacing="16" style="-fx-padding: 24; -fx-background-color: #f4f4f4;">
+        <VBox spacing="16" VBox.vgrow="ALWAYS"
+              style="-fx-padding: 24; -fx-background-color: #f4f4f4;">
 
             <!-- Header -->
             <HBox alignment="CENTER_LEFT">
@@ -228,6 +202,13 @@
                     <Label text="Manage and respond to resident complaints"
                            style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
                 </VBox>
+                <Button text="📄  Export PDF" onAction="#handleExportPDF"
+                        style="-fx-background-color: #2d2d2d;
+                               -fx-text-fill: #ffffff;
+                               -fx-font-size: 12px;
+                               -fx-background-radius: 8;
+                               -fx-padding: 10 18;
+                               -fx-cursor: hand;"/>
             </HBox>
 
             <!-- Summary Cards -->
@@ -236,8 +217,7 @@
                       style="-fx-background-color: #ffffff;
                              -fx-background-radius: 10;
                              -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
+                             -fx-border-width: 1; -fx-padding: 20;">
                     <Label text="Total Complaints"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
@@ -254,8 +234,7 @@
                       style="-fx-background-color: #ffffff;
                              -fx-background-radius: 10;
                              -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
+                             -fx-border-width: 1; -fx-padding: 20;">
                     <Label text="Pending"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
@@ -272,8 +251,7 @@
                       style="-fx-background-color: #ffffff;
                              -fx-background-radius: 10;
                              -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
+                             -fx-border-width: 1; -fx-padding: 20;">
                     <Label text="Under Review"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
@@ -290,8 +268,7 @@
                       style="-fx-background-color: #ffffff;
                              -fx-background-radius: 10;
                              -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
+                             -fx-border-width: 1; -fx-padding: 20;">
                     <Label text="Resolved"
                            style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
                         <VBox.margin><Insets bottom="6"/></VBox.margin>
@@ -306,14 +283,13 @@
                 </VBox>
             </HBox>
 
-            <!-- Search and Filter -->
+            <!-- Search, Filter, and Date Range -->
             <HBox spacing="12" alignment="CENTER_LEFT">
                 <HBox HBox.hgrow="ALWAYS"
                       style="-fx-background-color: #ffffff;
                              -fx-background-radius: 10;
                              -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 10 16;">
+                             -fx-border-width: 1; -fx-padding: 10 16;">
                     <Label text="🔍 "
                            style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;"/>
                     <TextField fx:id="searchField"
@@ -321,67 +297,89 @@
                                HBox.hgrow="ALWAYS"
                                style="-fx-background-color: transparent;
                                       -fx-border-color: transparent;
-                                      -fx-font-size: 13px;
-                                      -fx-text-fill: #333333;"
+                                      -fx-font-size: 13px; -fx-text-fill: #333333;"
                                onKeyReleased="#handleSearch"/>
                 </HBox>
                 <ComboBox fx:id="filterStatus" promptText="Filter by status"
                           onAction="#handleFilter"
                           style="-fx-background-color: #ffffff;
-                                 -fx-border-color: #eeeeee;
-                                 -fx-border-width: 1;
-                                 -fx-border-radius: 10;
-                                 -fx-background-radius: 10;
-                                 -fx-font-size: 12px;
-                                 -fx-padding: 4;"/>
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1;
+                                 -fx-border-radius: 10; -fx-background-radius: 10;
+                                 -fx-font-size: 12px; -fx-padding: 4;"/>
                 <ComboBox fx:id="filterType" promptText="Filter by type"
                           onAction="#handleFilter"
                           style="-fx-background-color: #ffffff;
-                                 -fx-border-color: #eeeeee;
-                                 -fx-border-width: 1;
-                                 -fx-border-radius: 10;
-                                 -fx-background-radius: 10;
-                                 -fx-font-size: 12px;
-                                 -fx-padding: 4;"/>
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1;
+                                 -fx-border-radius: 10; -fx-background-radius: 10;
+                                 -fx-font-size: 12px; -fx-padding: 4;"/>
+                <DatePicker fx:id="filterDateFrom" promptText="From date"
+                            onAction="#handleFilter"
+                            style="-fx-background-color: #ffffff;
+                                   -fx-border-color: #eeeeee; -fx-border-width: 1;
+                                   -fx-border-radius: 10; -fx-background-radius: 10;
+                                   -fx-font-size: 12px;"/>
+                <DatePicker fx:id="filterDateTo" promptText="To date"
+                            onAction="#handleFilter"
+                            style="-fx-background-color: #ffffff;
+                                   -fx-border-color: #eeeeee; -fx-border-width: 1;
+                                   -fx-border-radius: 10; -fx-background-radius: 10;
+                                   -fx-font-size: 12px;"/>
+                <Button text="Clear" onAction="#handleClearFilters"
+                        style="-fx-background-color: #f4f4f4;
+                               -fx-text-fill: #555555; -fx-font-size: 12px;
+                               -fx-background-radius: 8; -fx-border-radius: 8;
+                               -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                               -fx-padding: 8 14; -fx-cursor: hand;"/>
             </HBox>
 
             <!-- Table -->
-            <VBox style="-fx-background-color: #ffffff;
+            <VBox VBox.vgrow="ALWAYS"
+                  style="-fx-background-color: #ffffff;
                          -fx-background-radius: 10;
                          -fx-border-color: #eeeeee;
                          -fx-border-width: 1;">
 
-                <!-- Table header -->
+                <!-- Table header with sort -->
                 <HBox style="-fx-padding: 14 16;
                              -fx-border-color: #f0f0f0;
                              -fx-border-width: 0 0 1 0;
                              -fx-background-color: #fafafa;
                              -fx-background-radius: 10 10 0 0;">
-                    <Label text="ID" prefWidth="100"
-                           style="-fx-font-size: 11px; -fx-font-weight: bold;
-                                  -fx-text-fill: #aaaaaa;"/>
-                    <Label text="COMPLAINANT" prefWidth="180"
-                           style="-fx-font-size: 11px; -fx-font-weight: bold;
-                                  -fx-text-fill: #aaaaaa;"/>
-                    <Label text="INCIDENT TYPE" prefWidth="160"
-                           style="-fx-font-size: 11px; -fx-font-weight: bold;
-                                  -fx-text-fill: #aaaaaa;"/>
+                    <Button text="ID ↕" prefWidth="100" onAction="#sortById"
+                            style="-fx-background-color: transparent;
+                                   -fx-font-size: 11px; -fx-font-weight: bold;
+                                   -fx-text-fill: #aaaaaa; -fx-cursor: hand;
+                                   -fx-padding: 0; -fx-alignment: CENTER_LEFT;"/>
+                    <Button text="COMPLAINANT ↕" prefWidth="180" onAction="#sortByName"
+                            style="-fx-background-color: transparent;
+                                   -fx-font-size: 11px; -fx-font-weight: bold;
+                                   -fx-text-fill: #aaaaaa; -fx-cursor: hand;
+                                   -fx-padding: 0; -fx-alignment: CENTER_LEFT;"/>
+                    <Button text="INCIDENT TYPE ↕" prefWidth="160" onAction="#sortByType"
+                            style="-fx-background-color: transparent;
+                                   -fx-font-size: 11px; -fx-font-weight: bold;
+                                   -fx-text-fill: #aaaaaa; -fx-cursor: hand;
+                                   -fx-padding: 0; -fx-alignment: CENTER_LEFT;"/>
                     <Label text="LOCATION" prefWidth="160"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="DATE FILED" prefWidth="120"
-                           style="-fx-font-size: 11px; -fx-font-weight: bold;
-                                  -fx-text-fill: #aaaaaa;"/>
-                    <Label text="STATUS" prefWidth="120"
-                           style="-fx-font-size: 11px; -fx-font-weight: bold;
-                                  -fx-text-fill: #aaaaaa;"/>
+                    <Button text="DATE FILED ↕" prefWidth="120" onAction="#sortByDate"
+                            style="-fx-background-color: transparent;
+                                   -fx-font-size: 11px; -fx-font-weight: bold;
+                                   -fx-text-fill: #aaaaaa; -fx-cursor: hand;
+                                   -fx-padding: 0; -fx-alignment: CENTER_LEFT;"/>
+                    <Button text="STATUS ↕" prefWidth="120" onAction="#sortByStatus"
+                            style="-fx-background-color: transparent;
+                                   -fx-font-size: 11px; -fx-font-weight: bold;
+                                   -fx-text-fill: #aaaaaa; -fx-cursor: hand;
+                                   -fx-padding: 0; -fx-alignment: CENTER_LEFT;"/>
                     <Label text="ACTION" prefWidth="150"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
                 </HBox>
 
                 <!-- Scrollable Table rows -->
-                <ScrollPane fitToWidth="true" prefHeight="300"
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
                             style="-fx-background-color: transparent;
                                    -fx-background: transparent;
                                    -fx-border-color: transparent;">
@@ -393,6 +391,27 @@
                         </Label>
                     </VBox>
                 </ScrollPane>
+
+                <!-- Pagination -->
+                <HBox alignment="CENTER" spacing="8"
+                      style="-fx-padding: 12 16;
+                             -fx-border-color: #f0f0f0;
+                             -fx-border-width: 1 0 0 0;">
+                    <Button text="← Prev" fx:id="prevButton" onAction="#handlePrev"
+                            style="-fx-background-color: #f4f4f4;
+                                   -fx-text-fill: #555555; -fx-font-size: 12px;
+                                   -fx-background-radius: 8; -fx-border-radius: 8;
+                                   -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                                   -fx-padding: 6 14; -fx-cursor: hand;"/>
+                    <Label fx:id="pageLabel" text="Page 1 of 1"
+                           style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                    <Button text="Next →" fx:id="nextButton" onAction="#handleNext"
+                            style="-fx-background-color: #f4f4f4;
+                                   -fx-text-fill: #555555; -fx-font-size: 12px;
+                                   -fx-background-radius: 8; -fx-border-radius: 8;
+                                   -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                                   -fx-padding: 6 14; -fx-cursor: hand;"/>
+                </HBox>
 
             </VBox>
         </VBox>

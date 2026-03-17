@@ -35,3 +35,149 @@
     -fx-font-weight: bold;
     -fx-background-insets: 0;
 }
+
+/* ── TableView modern styling ─────────────────────────── */
+
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 8 8 0 0;
+}
+
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-size: 44px;
+}
+
+.table-view .column-header .label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #999999;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.table-view .table-row-cell {
+    -fx-border-color: transparent transparent #f4f4f4 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 52px;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #e8f5ff;
+}
+
+.table-view .table-row-cell:selected .table-cell {
+    -fx-text-fill: #1a1a1a;
+}
+
+.table-view .table-cell {
+    -fx-font-size: 13px;
+    -fx-text-fill: #333333;
+    -fx-padding: 0 14;
+    -fx-border-color: transparent;
+}
+
+.table-view .filler {
+    -fx-background-color: #f8f9fa;
+}
+
+.table-view .corner {
+    -fx-background-color: #f8f9fa;
+}
+
+.table-view:focused {
+    -fx-border-color: transparent;
+}
+
+/* ── Bar chart colors ─────────────────────────────────── */
+
+.default-color0.chart-bar {
+    -fx-bar-fill: #43a047;
+}
+
+.default-color1.chart-bar {
+    -fx-bar-fill: #e53935;
+}
+
+.default-color0.chart-legend-item-symbol {
+    -fx-background-color: #43a047;
+}
+
+.default-color1.chart-legend-item-symbol {
+    -fx-background-color: #e53935;
+}
+
+/* ── Chart background ─────────────────────────────────── */
+
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.chart-plot-background {
+    -fx-background-color: #fafafa;
+    -fx-background-radius: 8;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: transparent;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: #eeeeee;
+}
+
+.axis {
+    -fx-tick-label-fill: #999999;
+    -fx-minor-tick-visible: false;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-padding: 8 0 0 0;
+}
+
+.chart-legend-item {
+    -fx-font-size: 12px;
+    -fx-text-fill: #666666;
+}
+
+.chart-pie-label {
+    -fx-font-size: 11px;
+    -fx-fill: #555555;
+}
+
+.chart-pie-label-line {
+    -fx-stroke: transparent;
+}
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical .increment-button,
+.scroll-bar:vertical .decrement-button {
+    -fx-padding: 0;
+}
+
+.scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #cccccc;
+    -fx-background-radius: 4;
+}
+
+.scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #aaaaaa;
+}
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-cache: true;
+}

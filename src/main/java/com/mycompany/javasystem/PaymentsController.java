@@ -275,48 +275,56 @@ public class PaymentsController {
     }
 
     @FXML
-    private void createTestPayment() {
-        try {
-            String result = PayMongoService.createPaymentLink("REQ-001", "Clearance", 10000);
-            String[] parts = result.split("\\|");
-            String checkoutUrl = parts[0];
-            String linkId = parts[1];
+   private void createTestPayment() {
+       try {
+           String result = PayMongoService.createPaymentLink("REQ-001", "Clearance", 10000);
+           String[] parts = result.split("\\|");
+           String checkoutUrl = parts[0];
+           String linkId = parts[1];
 
-            Connection conn = DatabaseConnection.getConnection();
-            String sql = "INSERT INTO payments (payment_id, ref_number, resident_name, payment_type, amount, status, date_created, archived) VALUES (?, ?, ?, ?, ?, ?, ?, False)";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            stmt.setString(1, linkId);
-            stmt.setString(2, "REQ-001");
-            stmt.setString(3, "Maria Santos");
-            stmt.setString(4, "Clearance");
-            stmt.setDouble(5, 100.00);
-            stmt.setString(6, "Pending");
-            stmt.setString(7, java.time.LocalDateTime.now()
-                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            stmt.executeUpdate();
-            stmt.close();
-            conn.close();
+           Connection conn = DatabaseConnection.getConnection();
+           String sql = "INSERT INTO payments (payment_id, ref_number, resident_name, payment_type, amount, status, date_created, archived) VALUES (?, ?, ?, ?, ?, ?, ?, False)";
+           PreparedStatement stmt = conn.prepareStatement(sql);
+           stmt.setString(1, linkId);
+           stmt.setString(2, "REQ-001");
+           stmt.setString(3, "Maria Santos");
+           stmt.setString(4, "Clearance");
+           stmt.setDouble(5, 100.00);
+           stmt.setString(6, "Pending");
+           stmt.setString(7, java.time.LocalDateTime.now()
+                   .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+           stmt.executeUpdate();
+           stmt.close();
+           conn.close();
 
-            java.awt.Desktop.getDesktop().browse(new java.net.URI(checkoutUrl));
+           loadPayments("", "All");
+           loadSummary();
 
-            loadPayments("", "All");
-            loadSummary();
+           // Show modal FIRST — browser only opens after user clicks OK
+           Alert info = new Alert(Alert.AlertType.INFORMATION);
+           info.setTitle("Test Payment Created");
+           info.setHeaderText("PayMongo checkout will open after you click OK");
+           info.setContentText(
+               "Use test card:\n" +
+               "Card: 4343 4343 4343 4343\n" +
+               "Expiry: Any future date\n" +
+               "CVV: Any 3 digits\n\n" +
+               "The status will auto-update once payment is completed.\n\n" +
+               "Click OK to open the payment page in your browser.");
+           info.showAndWait();
 
-            Alert info = new Alert(Alert.AlertType.INFORMATION);
-            info.setTitle("Test Payment Created");
-            info.setHeaderText("PayMongo checkout opened in browser");
-            info.setContentText("Use test card:\nCard: 4343 4343 4343 4343\nExpiry: Any future date\nCVV: Any 3 digits\n\nThe status will auto-update once payment is completed.");
-            info.showAndWait();
+           // Browser opens AFTER modal is dismissed
+           java.awt.Desktop.getDesktop().browse(new java.net.URI(checkoutUrl));
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            Alert error = new Alert(Alert.AlertType.ERROR);
-            error.setTitle("Error");
-            error.setHeaderText("Failed to create test payment");
-            error.setContentText(e.getMessage());
-            error.showAndWait();
-        }
-    }
+       } catch (Exception e) {
+           e.printStackTrace();
+           Alert error = new Alert(Alert.AlertType.ERROR);
+           error.setTitle("Error");
+           error.setHeaderText("Failed to create test payment");
+           error.setContentText(e.getMessage());
+           error.showAndWait();
+       }
+   }
 
     @FXML
     private void handleSearch() {
@@ -359,6 +367,15 @@ public class PaymentsController {
     private void goToComplaints() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Complaints.fxml", true, getClass());
+    }
+    @FXML 
+    private void goToAnnouncements() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Announcements.fxml", true, getClass());
+    }
+    @FXML private void goToFinances() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Finances.fxml", true, getClass());
     }
     @FXML
     private void handleLogout() {

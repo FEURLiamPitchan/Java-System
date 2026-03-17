@@ -6,6 +6,7 @@ module com.mycompany.javasystem {
     requires okhttp3;
     requires org.json;
     requires kotlin.stdlib;
+    requires itextpdf;
     requires java.desktop;
     opens com.mycompany.javasystem to javafx.fxml;
     exports com.mycompany.javasystem;

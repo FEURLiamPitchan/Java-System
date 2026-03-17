@@ -95,9 +95,10 @@
             </Button>
 
             <Button text="👥   Residents" maxWidth="Infinity" 
-                    style="-fx-background-color: transparent;
-                           -fx-text-fill: #555555;
+                    style="-fx-background-color: #2d2d2d;
+                           -fx-text-fill: #ffffff;
                            -fx-font-size: 13px;
+                           -fx-font-weight: bold;
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
@@ -119,10 +120,9 @@
 
             <Button text="💳   Payments" maxWidth="Infinity"
                     onAction="#goToPayments" focusTraversable="false"
-                    style="-fx-background-color: #2d2d2d;
-                           -fx-text-fill: #ffffff;
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
                            -fx-font-size: 13px;
-                           -fx-font-weight: bold;
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
@@ -160,6 +160,7 @@
             </Button>
 
             <Button text="📣   Announcements" maxWidth="Infinity"
+                    onAction="#goToAnnouncements"
                     focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
@@ -176,7 +177,7 @@
                           -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
 
             <Button text="📊   Finance" maxWidth="Infinity"
-                    focusTraversable="false"
+                    onAction="#goToFinances" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555;
                            -fx-font-size: 13px;
@@ -209,22 +210,18 @@
             <!-- Header -->
             <HBox alignment="CENTER_LEFT">
                 <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Payments"
+                    <Label text="Residents"
                            style="-fx-font-size: 22px; -fx-font-weight: bold;
                                   -fx-text-fill: #1a1a1a;">
                         <VBox.margin><Insets bottom="4"/></VBox.margin>
                     </Label>
-                    <Label text="Manage and verify resident payments"
+                    <Label text="Manage resident information"
                            style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
                 </VBox>
-            </HBox>
-
-            <!-- TEMP TEST BUTTON -->
-            <HBox>
-                <Button text="🧪 Create Test Payment" onAction="#createTestPayment"
+                <Button text="➕   Add Resident" onAction="#handleAddResident"
                         focusTraversable="false"
-                        style="-fx-background-color: #e3f2fd;
-                               -fx-text-fill: #1e88e5;
+                        style="-fx-background-color: #2d2d2d;
+                               -fx-text-fill: #ffffff;
                                -fx-font-size: 12px;
                                -fx-font-weight: bold;
                                -fx-background-radius: 8;
@@ -232,65 +229,7 @@
                                -fx-cursor: hand;"/>
             </HBox>
 
-            <!-- Summary Cards -->
-            <HBox spacing="16">
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff;
-                             -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
-                    <Label text="Total Collected"
-                           style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="totalCollectedLabel" text="₱0.00"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="All time"
-                           style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff;
-                             -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
-                    <Label text="Pending Payments"
-                           style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="pendingCountLabel" text="0"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="Awaiting payment"
-                           style="-fx-font-size: 11px; -fx-text-fill: #f59e0b;"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff;
-                             -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee;
-                             -fx-border-width: 1;
-                             -fx-padding: 20;">
-                    <Label text="Paid"
-                           style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="paidCountLabel" text="0"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="Completed payments"
-                           style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
-                </VBox>
-            </HBox>
-
-            <!-- Search and Filter -->
+            <!-- Search -->
             <HBox spacing="12" alignment="CENTER_LEFT">
                 <HBox HBox.hgrow="ALWAYS"
                       style="-fx-background-color: #ffffff;
@@ -300,7 +239,7 @@
                              -fx-padding: 10 16;">
                     <Label text="🔍 "
                            style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;"/>
-                    <TextField fx:id="searchField" promptText="Search by name or reference number..."
+                    <TextField fx:id="searchField" promptText="Search by name, ID, or address..."
                                HBox.hgrow="ALWAYS"
                                style="-fx-background-color: transparent;
                                       -fx-border-color: transparent;
@@ -308,15 +247,6 @@
                                       -fx-text-fill: #333333;"
                                onKeyReleased="#handleSearch"/>
                 </HBox>
-                <ComboBox fx:id="filterStatus" promptText="Filter by status"
-                          onAction="#handleFilter"
-                          style="-fx-background-color: #ffffff;
-                                 -fx-border-color: #eeeeee;
-                                 -fx-border-width: 1;
-                                 -fx-border-radius: 10;
-                                 -fx-background-radius: 10;
-                                 -fx-font-size: 12px;
-                                 -fx-padding: 4;"/>
             </HBox>
 
             <!-- Table -->
@@ -331,36 +261,33 @@
                              -fx-border-width: 0 0 1 0;
                              -fx-background-color: #fafafa;
                              -fx-background-radius: 10 10 0 0;">
-                    <Label text="PAY #" prefWidth="120"
+                    <Label text="#" prefWidth="100"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="RESIDENT" prefWidth="200"
+                    <Label text="NAME" prefWidth="200"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="PAYMENT TYPE" prefWidth="180"
+                    <Label text="AGE" prefWidth="80"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="AMOUNT" prefWidth="120"
+                    <Label text="ADDRESS" prefWidth="250"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="DATE" prefWidth="140"
+                    <Label text="STATUS" prefWidth="100"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
-                    <Label text="STATUS" prefWidth="120"
-                           style="-fx-font-size: 11px; -fx-font-weight: bold;
-                                  -fx-text-fill: #aaaaaa;"/>
-                    <Label text="ACTION" prefWidth="180"
+                    <Label text="ACTION" prefWidth="150"
                            style="-fx-font-size: 11px; -fx-font-weight: bold;
                                   -fx-text-fill: #aaaaaa;"/>
                 </HBox>
 
                 <!-- Scrollable Table rows -->
-                <ScrollPane fitToWidth="true" prefHeight="300"
+                <ScrollPane fitToWidth="true" prefHeight="400"
                             style="-fx-background-color: transparent;
                                    -fx-background: transparent;
                                    -fx-border-color: transparent;">
-                    <VBox fx:id="paymentsTableBody" style="-fx-padding: 0 16;">
-                        <Label text="No payments found."
+                    <VBox fx:id="residentsTableBody" style="-fx-padding: 0 16;">
+                        <Label text="No residents found."
                                style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;
                                       -fx-padding: 20 0;">
                             <VBox.margin><Insets top="20" bottom="20"/></VBox.margin>

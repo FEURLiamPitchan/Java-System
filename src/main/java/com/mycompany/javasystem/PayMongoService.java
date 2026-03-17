@@ -10,7 +10,7 @@ import java.util.Base64;
 
 public class PayMongoService {
 
-    private static final String SECRET_KEY = System.getenv("PAYMONGO_SECRET_KEY");
+    private static final String SECRET_KEY = "sk_test_wxooREqwAJ3qSFcAhiP4PWas";
     private static final String BASE_URL = "https://api.paymongo.com/v1";
     private static final OkHttpClient client = new OkHttpClient();
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
@@ -34,7 +34,6 @@ public class PayMongoService {
         body.put("data", data);
 
         RequestBody requestBody = RequestBody.create(body.toString(), JSON);
-
         Request request = new Request.Builder()
             .url(BASE_URL + "/links")
             .post(requestBody)
@@ -44,7 +43,14 @@ public class PayMongoService {
 
         try (Response response = client.newCall(request).execute()) {
             String responseBody = response.body().string();
+            System.out.println("PayMongo response: " + responseBody);
+
             JSONObject json = new JSONObject(responseBody);
+
+            if (!json.has("data")) {
+                throw new Exception("PayMongo error: " + responseBody);
+            }
+
             JSONObject dataObj = json.getJSONObject("data");
             JSONObject attr = dataObj.getJSONObject("attributes");
             return attr.getString("checkout_url") + "|" + dataObj.getString("id");
@@ -61,7 +67,14 @@ public class PayMongoService {
 
         try (Response response = client.newCall(request).execute()) {
             String responseBody = response.body().string();
+            System.out.println("PayMongo status response: " + responseBody);
+
             JSONObject json = new JSONObject(responseBody);
+
+            if (!json.has("data")) {
+                throw new Exception("PayMongo error: " + responseBody);
+            }
+
             JSONObject dataObj = json.getJSONObject("data");
             JSONObject attr = dataObj.getJSONObject("attributes");
             return attr.getString("status");

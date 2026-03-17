@@ -1,9 +1,12 @@
 com\mycompany\javasystem\PaymentArchiveController.class
 com\mycompany\javasystem\AddResidentController.class
+com\mycompany\javasystem\FinancesController$1.class
+com\mycompany\javasystem\AnnouncementsController.class
 com\mycompany\javasystem\ViewComplaintController.class
 com\mycompany\javasystem\PayMongoService.class
 com\mycompany\javasystem\RegisterController.class
 com\mycompany\javasystem\ResidentsController.class
+com\mycompany\javasystem\FinancesController$4.class
 module-info.class
 com\mycompany\javasystem\DocumentsController.class
 com\mycompany\javasystem\AdminDashboardController.class
@@ -11,6 +14,10 @@ com\mycompany\javasystem\ComplaintsController.class
 com\mycompany\javasystem\SceneTransition.class
 com\mycompany\javasystem\ViewResidentController.class
 com\mycompany\javasystem\PaymentsController.class
+com\mycompany\javasystem\FinancesController.class
+com\mycompany\javasystem\AnnouncementsModalController.class
+com\mycompany\javasystem\FinancesController$2.class
 com\mycompany\javasystem\LoginController.class
+com\mycompany\javasystem\FinancesController$3.class
 com\mycompany\javasystem\DatabaseConnection.class
 com\mycompany\javasystem\App.class

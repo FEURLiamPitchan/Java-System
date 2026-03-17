@@ -152,6 +152,15 @@ public class PaymentArchiveController {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Complaints.fxml", true, getClass());
     }
+    @FXML 
+    private void goToAnnouncements() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Announcements.fxml", true, getClass());
+    }
+    @FXML private void goToFinances() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Finances.fxml", true, getClass());
+    }
     @FXML
     private void handleLogout() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();

@@ -8,152 +8,149 @@
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.mycompany.javasystem.ViewResidentController"
-      prefWidth="460"
-      style="-fx-background-color: #ffffff;
-             -fx-background-radius: 12;
-             -fx-padding: 32;">
+      prefWidth="520"
+      style="-fx-background-color: #f8f8f8;">
 
-    <!-- Header -->
-    <HBox alignment="CENTER_LEFT">
-        <VBox.margin><Insets bottom="24"/></VBox.margin>
-        <VBox HBox.hgrow="ALWAYS" spacing="4">
-            <Label text="Resident Details"
-                   style="-fx-font-size: 18px; -fx-font-weight: bold;
-                          -fx-text-fill: #1a1a1a;"/>
-            <Label text="Full information of the selected resident"
-                   style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
-        </VBox>
-        <Button text="✕" onAction="#handleClose"
-                style="-fx-background-color: #f4f4f4;
-                       -fx-text-fill: #555555;
-                       -fx-font-size: 12px;
-                       -fx-background-radius: 6;
-                       -fx-padding: 6 10;
-                       -fx-cursor: hand;"/>
-    </HBox>
-
-    <!-- Resident ID -->
-    <HBox alignment="CENTER_LEFT" spacing="0"
-          style="-fx-background-color: #fafafa;
-                 -fx-background-radius: 8;
-                 -fx-border-color: #f0f0f0;
-                 -fx-border-width: 1;
-                 -fx-border-radius: 8;
-                 -fx-padding: 14 16;">
-        <VBox.margin><Insets bottom="10"/></VBox.margin>
-        <VBox HBox.hgrow="ALWAYS" spacing="3">
-            <Label text="RESIDENT ID"
-                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
-            <Label fx:id="residentIdLabel"
-                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
-        </VBox>
-    </HBox>
-
-    <!-- Full Name -->
-    <HBox alignment="CENTER_LEFT" spacing="0"
-          style="-fx-background-color: #fafafa;
-                 -fx-background-radius: 8;
-                 -fx-border-color: #f0f0f0;
-                 -fx-border-width: 1;
-                 -fx-border-radius: 8;
-                 -fx-padding: 14 16;">
-        <VBox.margin><Insets bottom="10"/></VBox.margin>
-        <VBox HBox.hgrow="ALWAYS" spacing="3">
-            <Label text="FULL NAME"
-                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
-            <Label fx:id="fullNameLabel"
-                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
-        </VBox>
-    </HBox>
-
-    <!-- Age and Status row -->
-    <HBox spacing="10">
-        <VBox.margin><Insets bottom="10"/></VBox.margin>
-        <HBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS"
-              style="-fx-background-color: #fafafa;
-                     -fx-background-radius: 8;
-                     -fx-border-color: #f0f0f0;
-                     -fx-border-width: 1;
-                     -fx-border-radius: 8;
-                     -fx-padding: 14 16;">
-            <VBox spacing="3">
-                <Label text="AGE"
-                       style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
-                <Label fx:id="ageLabel"
-                       style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
+    <!-- Dark Header Bar -->
+    <VBox style="-fx-background-color: #2d2d2d; -fx-padding: 24 28;">
+        <HBox alignment="CENTER_LEFT">
+            <VBox HBox.hgrow="ALWAYS" spacing="4">
+                <Label text="Resident Details"
+                       style="-fx-font-size: 20px; -fx-font-weight: bold;
+                              -fx-text-fill: #ffffff;"/>
+                <Label text="Full information of the selected resident"
+                       style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
             </VBox>
+            <Button text="✕" onAction="#handleClose"
+                    style="-fx-background-color: #444444;
+                           -fx-text-fill: #ffffff;
+                           -fx-font-size: 12px;
+                           -fx-background-radius: 6;
+                           -fx-padding: 6 10;
+                           -fx-cursor: hand;"/>
         </HBox>
-        <HBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS"
-              style="-fx-background-color: #fafafa;
+    </VBox>
+
+    <!-- Form Body -->
+    <VBox spacing="12" style="-fx-padding: 24 28 8 28;">
+
+        <!-- Resident ID -->
+        <VBox spacing="3"
+              style="-fx-background-color: #ffffff;
                      -fx-background-radius: 8;
-                     -fx-border-color: #f0f0f0;
+                     -fx-border-color: #e0e0e0;
                      -fx-border-width: 1;
                      -fx-border-radius: 8;
                      -fx-padding: 14 16;">
-            <VBox spacing="3">
+            <Label text="RESIDENT ID"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999;"/>
+            <Label fx:id="residentIdLabel"
+                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                          -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+
+        <!-- Full Name -->
+        <VBox spacing="3"
+              style="-fx-background-color: #ffffff;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #e0e0e0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
+            <Label text="FULL NAME"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999;"/>
+            <Label fx:id="fullNameLabel"
+                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                          -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+
+        <!-- Age and Status -->
+        <HBox spacing="12">
+            <VBox HBox.hgrow="ALWAYS" spacing="3"
+                  style="-fx-background-color: #ffffff;
+                         -fx-background-radius: 8;
+                         -fx-border-color: #e0e0e0;
+                         -fx-border-width: 1;
+                         -fx-border-radius: 8;
+                         -fx-padding: 14 16;">
+                <Label text="AGE"
+                       style="-fx-font-size: 10px; -fx-font-weight: bold;
+                              -fx-text-fill: #999999;"/>
+                <Label fx:id="ageLabel"
+                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                              -fx-text-fill: #1a1a1a;"/>
+            </VBox>
+            <VBox HBox.hgrow="ALWAYS" spacing="3"
+                  style="-fx-background-color: #ffffff;
+                         -fx-background-radius: 8;
+                         -fx-border-color: #e0e0e0;
+                         -fx-border-width: 1;
+                         -fx-border-radius: 8;
+                         -fx-padding: 14 16;">
                 <Label text="STATUS"
-                       style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+                       style="-fx-font-size: 10px; -fx-font-weight: bold;
+                              -fx-text-fill: #999999;"/>
                 <Label fx:id="statusLabel"
                        style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
             </VBox>
         </HBox>
-    </HBox>
 
-    <!-- Address -->
-    <HBox alignment="CENTER_LEFT" spacing="0"
-          style="-fx-background-color: #fafafa;
-                 -fx-background-radius: 8;
-                 -fx-border-color: #f0f0f0;
-                 -fx-border-width: 1;
-                 -fx-border-radius: 8;
-                 -fx-padding: 14 16;">
-        <VBox.margin><Insets bottom="10"/></VBox.margin>
-        <VBox HBox.hgrow="ALWAYS" spacing="3">
+        <!-- Address -->
+        <VBox spacing="3"
+              style="-fx-background-color: #ffffff;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #e0e0e0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
             <Label text="ADDRESS"
-                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999;"/>
             <Label fx:id="addressLabel"
-                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
+                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a;"/>
         </VBox>
-    </HBox>
 
-    <!-- Date Added -->
-    <HBox alignment="CENTER_LEFT" spacing="0"
-          style="-fx-background-color: #fafafa;
-                 -fx-background-radius: 8;
-                 -fx-border-color: #f0f0f0;
-                 -fx-border-width: 1;
-                 -fx-border-radius: 8;
-                 -fx-padding: 14 16;">
-        <VBox.margin><Insets bottom="24"/></VBox.margin>
-        <VBox HBox.hgrow="ALWAYS" spacing="3">
+        <!-- Date Added -->
+        <VBox spacing="3"
+              style="-fx-background-color: #ffffff;
+                     -fx-background-radius: 8;
+                     -fx-border-color: #e0e0e0;
+                     -fx-border-width: 1;
+                     -fx-border-radius: 8;
+                     -fx-padding: 14 16;">
             <Label text="DATE ADDED"
-                   style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999;"/>
             <Label fx:id="dateAddedLabel"
-                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
+                   style="-fx-font-size: 13px; -fx-text-fill: #1a1a1a;"/>
         </VBox>
-    </HBox>
 
-    <!-- Buttons -->
-    <HBox spacing="12" alignment="CENTER_RIGHT">
+    </VBox>
+
+    <!-- Footer Buttons -->
+    <HBox spacing="12" alignment="CENTER_RIGHT"
+          style="-fx-padding: 16 28 24 28;
+                 -fx-border-color: #eeeeee;
+                 -fx-border-width: 1 0 0 0;
+                 -fx-background-color: #ffffff;">
         <Button text="Delete Resident" onAction="#handleDelete"
                 style="-fx-background-color: #fff0f0;
                        -fx-text-fill: #e53935;
                        -fx-font-size: 13px;
-                       -fx-font-weight: bold;
                        -fx-background-radius: 8;
                        -fx-border-radius: 8;
                        -fx-border-color: #ffcdd2;
                        -fx-border-width: 1;
-                       -fx-padding: 10 24;
+                       -fx-padding: 11 24;
                        -fx-cursor: hand;"/>
         <Button text="Close" onAction="#handleClose"
                 style="-fx-background-color: #2d2d2d;
                        -fx-text-fill: #ffffff;
                        -fx-font-size: 13px;
-                       -fx-font-weight: bold;
                        -fx-background-radius: 8;
-                       -fx-border-radius: 8;
-                       -fx-padding: 10 24;
+                       -fx-padding: 11 24;
                        -fx-cursor: hand;"/>
     </HBox>
 

@@ -77,13 +77,33 @@ public class LoginController {
     private void loadDashboard(String role) {
         try {
             Stage stage = (Stage) emailField.getScene().getWindow();
-            SceneTransition.slideTo(stage, "AdminDashboard.fxml", true, getClass());
+            String fxml;
+
+            switch (role.toLowerCase()) {
+                case "admin":
+                    fxml = "AdminDashboard.fxml";
+                    break;
+                case "barangay_captain":
+                    fxml = "BarangayCaptainDashboard.fxml";
+                    break;
+                case "secretary":
+                    fxml = "SecretaryDashboard.fxml";
+                    break;
+                case "treasurer":
+                    fxml = "TreasurerDashboard.fxml";
+                    break;
+                default:
+                    fxml = "ResidentDashboard.fxml";
+                    break;
+            }
+
+            SceneTransition.slideTo(stage, fxml, true, getClass());
+
         } catch (Exception e) {
             e.printStackTrace();
             showError("Error loading dashboard.");
         }
     }
-
     @FXML
     private void goToRegister() {
         Stage stage = (Stage) emailField.getScene().getWindow();
