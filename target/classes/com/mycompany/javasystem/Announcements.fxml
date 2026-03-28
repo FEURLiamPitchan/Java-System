@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.*?>
+<?import javafx.scene.image.*?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
@@ -30,32 +31,59 @@
                 </VBox>
             </HBox>
             <HBox alignment="CENTER_RIGHT" spacing="12">
-                <HBox alignment="CENTER" spacing="8"
+                <!-- Alerts button with badge -->
+                <StackPane>
+                    <Button fx:id="alertsButton" text="🔔  Alerts" onAction="#handleAlertsClick"
+                            style="-fx-background-color: #f4f4f4;
+                                   -fx-text-fill: #333333;
+                                   -fx-font-size: 12px;
+                                   -fx-background-radius: 20;
+                                   -fx-border-radius: 20;
+                                   -fx-border-color: #e0e0e0;
+                                   -fx-border-width: 1;
+                                   -fx-padding: 8 16;
+                                   -fx-cursor: hand;"/>
+                    <Label fx:id="alertBadge" text="0"
+                           visible="false"
+                           style="-fx-background-color: #e53935;
+                                  -fx-text-fill: #ffffff;
+                                  -fx-font-size: 9px;
+                                  -fx-font-weight: bold;
+                                  -fx-background-radius: 10;
+                                  -fx-padding: 2 5;
+                                  -fx-min-width: 16;
+                                  -fx-min-height: 16;"
+                           StackPane.alignment="TOP_RIGHT"/>
+                </StackPane>
+
+                <!-- Avatar — clickable -->
+                <HBox fx:id="avatarBox" alignment="CENTER" spacing="8"
+                      onMouseClicked="#handleAvatarClick"
                       style="-fx-background-color: #f4f4f4;
-                             -fx-background-radius: 20;
-                             -fx-border-radius: 20;
-                             -fx-border-color: #e0e0e0;
-                             -fx-border-width: 1;
-                             -fx-padding: 6 16;">
-                    <Circle radius="14" fill="#2d2d2d"/>
+                             -fx-background-radius: 20; -fx-border-radius: 20;
+                             -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                             -fx-padding: 6 16; -fx-cursor: hand;">
+                    <StackPane>
+                        <Circle radius="14" fill="#2d2d2d" fx:id="avatarCircle"/>
+                        <ImageView fx:id="profileImageView"
+                                   fitWidth="28" fitHeight="28"
+                                   preserveRatio="false" visible="false"/>
+                        <Label fx:id="avatarInitialLabel" text="A"
+                               style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #ffffff;"/>
+                    </StackPane>
                     <VBox alignment="CENTER_LEFT" spacing="1">
-                        <Label text="Administrator"
-                               style="-fx-font-size: 12px; -fx-font-weight: bold;
-                                      -fx-text-fill: #1a1a1a;"/>
-                        <Label text="Admin"
+                        <Label fx:id="topBarNameLabel" text="Administrator"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                        <Label fx:id="topBarRoleLabel" text="Admin"
                                style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
                     </VBox>
                 </HBox>
+
                 <Button fx:id="logoutButton" text="← Logout" onAction="#handleLogout"
-                        style="-fx-background-color: #ffffff;
-                               -fx-text-fill: #555555;
-                               -fx-font-size: 12px;
-                               -fx-background-radius: 8;
-                               -fx-border-radius: 8;
-                               -fx-border-color: #e0e0e0;
-                               -fx-border-width: 1;
-                               -fx-padding: 8 16;
-                               -fx-cursor: hand;"/>
+                        style="-fx-background-color: #ffffff; -fx-text-fill: #555555;
+                               -fx-font-size: 12px; -fx-background-radius: 8;
+                               -fx-border-radius: 8; -fx-border-color: #e0e0e0;
+                               -fx-border-width: 1; -fx-padding: 8 16; -fx-cursor: hand;"/>
             </HBox>
         </HBox>
     </top>
@@ -148,7 +176,7 @@
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
             <Button text="⚙️   Admin" maxWidth="Infinity"
-                    focusTraversable="false"
+                    onAction="#goToAdmin" focusTraversable="false"
                     style="-fx-background-color: transparent;
                            -fx-text-fill: #555555; -fx-font-size: 13px;
                            -fx-background-radius: 8; -fx-padding: 11 16;

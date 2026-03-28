@@ -1,4 +1,4 @@
-package com.mycompany.javasystem;
+ package com.mycompany.javasystem;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -51,13 +51,15 @@ public class LoginController {
         }
         try {
             Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT role FROM users WHERE email = ? AND password = ?";
+            String sql = "SELECT role, full_name FROM users WHERE email = ? AND password = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, email);
             stmt.setString(2, password);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 String role = rs.getString("role");
+                String fullName = rs.getString("full_name") != null ? rs.getString("full_name") : "Admin";
+                SessionManager.login(email, role, fullName);
                 rs.close();
                 stmt.close();
                 conn.close();

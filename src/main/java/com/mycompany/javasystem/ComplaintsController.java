@@ -13,26 +13,24 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
 // JavaFX
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.layout.StackPane;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Hyperlink;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 
 // Java
 import java.io.File;
@@ -41,6 +39,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -55,6 +55,12 @@ public class ComplaintsController {
     @FXML private DatePicker filterDateTo;
     @FXML private Button logoutButton;
     @FXML private Button alertsButton;
+    @FXML private HBox avatarBox;
+    @FXML private Circle avatarCircle;
+    @FXML private ImageView profileImageView;
+    @FXML private Label avatarInitialLabel;
+    @FXML private Label topBarNameLabel;
+    @FXML private Label topBarRoleLabel;
     @FXML private Button prevButton;
     @FXML private Button nextButton;
     @FXML private Label alertBadge;
@@ -82,44 +88,539 @@ public class ComplaintsController {
         filterType.getItems().addAll("All", "Noise Complaint", "Property Dispute",
                 "Public Disturbance", "Infrastructure Issue", "Other");
         filterType.setValue("All");
+        
+        loadTopBar();
+        loadAvatarPicture();
         loadComplaints();
         loadSummary();
-        updateAlertBadge();
+        syncNotifications();
+        refreshAlertBadge();
     }
 
-    private void updateAlertBadge() {
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            ResultSet rs = conn.prepareStatement(
-                "SELECT COUNT(*) FROM complaints WHERE is_read = False").executeQuery();
-            if (rs.next()) {
-                int count = rs.getInt(1);
-                if (count > 0) {
-                    alertBadge.setText(String.valueOf(count));
-                    alertBadge.setVisible(true);
-                } else {
-                    alertBadge.setVisible(false);
-                }
-            }
-            rs.close();
-            conn.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    // ── TOP BAR ────────────────────────────────────────────────────────────────────
+    private void loadTopBar() {
+        String name = SessionManager.getName();
+        String role = SessionManager.getRole();
+        if (topBarNameLabel != null)
+            topBarNameLabel.setText(name != null ? name : "Administrator");
+        if (topBarRoleLabel != null)
+            topBarRoleLabel.setText(role != null ? capitalize(role) : "Admin");
     }
 
+    private void loadAvatarPicture() {
+        ProfilePictureManager.loadAvatarPicture(
+            SessionManager.getEmail(),
+            avatarBox,
+            avatarCircle,
+            profileImageView,
+            avatarInitialLabel
+        );
+    }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
+    }
+
+    // ── AVATAR CLICK ───────────────────────────────────────────────────────────────
     @FXML
-    private void handleAlerts() {
+    private void handleAvatarClick() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
+    }
+
+    // ── NOTIFICATIONS ──────────────────────────────────────────────────────────────
+    private void cleanupNotifications() {
+        String email = SessionManager.getEmail();
+        if (email == null) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
-            conn.prepareStatement("UPDATE complaints SET is_read = True").executeUpdate();
+            conn.setAutoCommit(true);
+
+            PreparedStatement stmt1 = conn.prepareStatement(
+                "DELETE FROM notifications WHERE type = 'announcement' " +
+                "AND user_email = ? AND reference_id NOT IN " +
+                "(SELECT announcement_id FROM announcements)");
+            stmt1.setString(1, email);
+            int d1 = stmt1.executeUpdate();
+            stmt1.close();
+
+            PreparedStatement stmt2 = conn.prepareStatement(
+                "DELETE FROM notifications WHERE type = 'complaint' " +
+                "AND user_email = ? AND reference_id NOT IN " +
+                "(SELECT complaint_id FROM complaints WHERE status <> 'Resolved')");
+            stmt2.setString(1, email);
+            int d2 = stmt2.executeUpdate();
+            stmt2.close();
+
+            PreparedStatement stmt3 = conn.prepareStatement(
+                "DELETE FROM notifications WHERE type = 'payment' " +
+                "AND user_email = ? AND reference_id NOT IN " +
+                "(SELECT ref_number FROM payments " +
+                "WHERE status = 'Pending' AND archived = False)");
+            stmt3.setString(1, email);
+            int d3 = stmt3.executeUpdate();
+            stmt3.close();
+
             conn.close();
-            alertBadge.setVisible(false);
-            loadComplaints();
-        } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("[Cleanup] Removed " + (d1+d2+d3) + " stale notifications");
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void syncNotifications() {
+        cleanupNotifications();
+        String email = SessionManager.getEmail();
+        if (email == null) return;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+
+            ResultSet rs1 = conn.prepareStatement(
+                "SELECT ref_number, resident_name FROM payments " +
+                "WHERE status = 'Pending' AND archived = False"
+            ).executeQuery();
+            while (rs1.next()) {
+                String refNo = rs1.getString("ref_number");
+                String msg = "Pending payment from " +
+                    rs1.getString("resident_name") + " (" + refNo + ")";
+                insertIfNew(conn, "payment", msg, refNo, email);
+            }
+            rs1.close();
+
+            ResultSet rs2 = conn.prepareStatement(
+                "SELECT complaint_id, complainant_name, incident_type " +
+                "FROM complaints WHERE status <> 'Resolved'"
+            ).executeQuery();
+            while (rs2.next()) {
+                String cid = rs2.getString("complaint_id");
+                String msg = "Open complaint: " + rs2.getString("incident_type") +
+                    " by " + rs2.getString("complainant_name");
+                insertIfNew(conn, "complaint", msg, cid, email);
+            }
+            rs2.close();
+
+            ResultSet rs3 = conn.prepareStatement(
+                "SELECT announcement_id, title FROM announcements ORDER BY id DESC"
+            ).executeQuery();
+            int aCount = 0;
+            while (rs3.next() && aCount < 5) {
+                String aid = rs3.getString("announcement_id");
+                String msg = "Announcement posted: " + rs3.getString("title");
+                insertIfNew(conn, "announcement", msg, aid, email);
+                aCount++;
+            }
+            rs3.close();
+            conn.close();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void insertIfNew(Connection conn, String type,
+                              String message, String refId,
+                              String email) throws Exception {
+        PreparedStatement check = conn.prepareStatement(
+            "SELECT notif_id FROM notifications " +
+            "WHERE reference_id = ? AND user_email = ? AND type = ?");
+        check.setString(1, refId);
+        check.setString(2, email);
+        check.setString(3, type);
+        ResultSet rs = check.executeQuery();
+        boolean exists = rs.next();
+        rs.close(); check.close();
+
+        if (!exists) {
+            PreparedStatement ins = conn.prepareStatement(
+                "INSERT INTO notifications " +
+                "(type, message, reference_id, is_read, created_at, user_email) " +
+                "VALUES (?, ?, ?, 'false', ?, ?)");
+            ins.setString(1, type);
+            ins.setString(2, message);
+            ins.setString(3, refId);
+            ins.setString(4, LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            ins.setString(5, email);
+            ins.executeUpdate();
+            ins.close();
+            System.out.println("[Notif] New: " + type + " - " + refId);
         }
     }
+
+    private void markOneAsRead(String notifId) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+            PreparedStatement stmt = conn.prepareStatement(
+                "UPDATE notifications SET is_read = 'true' " +
+                "WHERE notif_id = " + notifId);
+            int updated = stmt.executeUpdate();
+            System.out.println("[Read] notif_id=" + notifId + " updated=" + updated);
+            stmt.close();
+            conn.close();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    private void refreshAlertBadge() {
+        String email = SessionManager.getEmail();
+        if (email == null) return;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT COUNT(*) FROM notifications " +
+                "WHERE user_email = ? AND is_read = 'false'");
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            int count = rs.next() ? rs.getInt(1) : 0;
+            rs.close(); stmt.close(); conn.close();
+            System.out.println("[Badge] Unread count = " + count);
+            if (count > 0) {
+                alertBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+                alertBadge.setVisible(true);
+            } else {
+                alertBadge.setVisible(false);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    // ── ALERTS POPUP ───────────────────────────────────────────────────────────────
+    @FXML
+    private void handleAlertsClick() {
+        Stage alertStage = new Stage();
+        alertStage.initModality(Modality.APPLICATION_MODAL);
+        alertStage.initOwner(logoutButton.getScene().getWindow());
+        alertStage.setTitle("Notifications");
+        alertStage.setResizable(false);
+
+        VBox root = new VBox(0);
+        root.setStyle(
+            "-fx-background-color: #ffffff; -fx-min-width: 480; -fx-max-width: 480;");
+
+        VBox header = new VBox(4);
+        header.setFocusTraversable(true);
+        header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 20 24;");
+        Label titleLbl = new Label("Notifications");
+        titleLbl.setStyle(
+            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        Label subLbl = new Label("Click a notification to view and take action");
+        subLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        header.getChildren().addAll(titleLbl, subLbl);
+
+        HBox filterRow = new HBox(8);
+        filterRow.setStyle(
+            "-fx-padding: 12 24; -fx-background-color: #f8f9fa;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 0 0 1 0;" +
+            "-fx-alignment: CENTER_LEFT;");
+
+        final boolean[] showingPast = {false};
+
+        Button unreadBtn = new Button("Unread");
+        unreadBtn.setStyle(
+            "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 11px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
+        Button pastBtn = new Button("Past Notifications");
+        pastBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+            "-fx-font-size: 11px; -fx-background-radius: 20;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+            "-fx-padding: 5 14; -fx-cursor: hand;");
+
+        Region filterSpacer = new Region();
+        HBox.setHgrow(filterSpacer, Priority.ALWAYS);
+        filterRow.getChildren().addAll(unreadBtn, pastBtn, filterSpacer);
+
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefHeight(380);
+        scrollPane.setStyle(
+            "-fx-background-color: transparent; -fx-background: transparent;" +
+            "-fx-border-color: transparent;");
+
+        VBox notifBody = new VBox(0);
+        notifBody.setStyle("-fx-background-color: #ffffff;");
+
+        Runnable[] loadNotifsRef = {null};
+
+        Runnable loadNotifs = () -> {
+            notifBody.getChildren().clear();
+            String email = SessionManager.getEmail();
+            if (email == null) return;
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                conn.setAutoCommit(true);
+                String sql = showingPast[0]
+                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
+                      "' ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_email = '" + email +
+                      "' AND is_read = 'false' ORDER BY notif_id DESC";
+                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                List<String[]> items = new ArrayList<>();
+                while (rs.next()) {
+                    items.add(new String[]{
+                        rs.getString("notif_id"),
+                        rs.getString("type"),
+                        rs.getString("message"),
+                        rs.getString("is_read"),
+                        rs.getString("created_at")
+                    });
+                }
+                rs.close(); conn.close();
+
+                if (items.isEmpty()) {
+                    VBox empty = new VBox(8);
+                    empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
+                    Label emptyLbl = new Label(
+                        showingPast[0]
+                            ? "No past notifications."
+                            : "You're all caught up! 🎉");
+                    emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
+                    empty.getChildren().add(emptyLbl);
+                    notifBody.getChildren().add(empty);
+                } else {
+                    for (String[] item : items)
+                        notifBody.getChildren().add(
+                            buildNotifItem(item, loadNotifsRef,
+                                showingPast, alertStage));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        };
+
+        loadNotifsRef[0] = loadNotifs;
+        loadNotifs.run();
+        scrollPane.setContent(notifBody);
+
+        unreadBtn.setOnAction(e -> {
+            showingPast[0] = false;
+            unreadBtn.setStyle(
+                "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
+            pastBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-background-radius: 20;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+                "-fx-padding: 5 14; -fx-cursor: hand;");
+            loadNotifs.run();
+        });
+
+        pastBtn.setOnAction(e -> {
+            showingPast[0] = true;
+            pastBtn.setStyle(
+                "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
+            unreadBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-background-radius: 20;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+                "-fx-padding: 5 14; -fx-cursor: hand;");
+            loadNotifs.run();
+        });
+
+        HBox footer = new HBox();
+        footer.setStyle(
+            "-fx-padding: 14 24; -fx-alignment: CENTER_RIGHT;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
+        Button closeBtn = new Button("Close");
+        closeBtn.setStyle(
+            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
+        closeBtn.setOnAction(e -> {
+            refreshAlertBadge();
+            alertStage.close();
+        });
+        footer.getChildren().add(closeBtn);
+
+        root.getChildren().addAll(header, filterRow, scrollPane, footer);
+        alertStage.setScene(new Scene(root));
+        Platform.runLater(() -> root.requestFocus());
+        alertStage.showAndWait();
+        refreshAlertBadge();
+    }
+
+    private VBox buildNotifItem(String[] item,
+                                 Runnable[] loadNotifsRef,
+                                 boolean[] showingPast,
+                                 Stage alertStage) {
+        String notifId = item[0];
+        String type    = item[1];
+        String message = item[2];
+        String isRead  = item[3];
+        String dateStr = item[4];
+        if (dateStr != null && dateStr.length() > 16)
+            dateStr = dateStr.substring(0, 16);
+
+        String icon, bg;
+        if ("complaint".equals(type))    { icon = "📢"; bg = "#ffebee"; }
+        else if ("payment".equals(type)) { icon = "💳"; bg = "#fff8e1"; }
+        else                             { icon = "📣"; bg = "#e3f2fd"; }
+
+        HBox row = new HBox(14);
+        row.setStyle(
+            "-fx-padding: 16 24;" +
+            "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
+            ("false".equals(isRead)
+                ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
+                : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        StackPane iconBox = new StackPane();
+        iconBox.setStyle(
+            "-fx-background-color: " + bg + "; -fx-background-radius: 10;" +
+            "-fx-min-width: 40; -fx-min-height: 40;" +
+            "-fx-max-width: 40; -fx-max-height: 40;");
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size: 16px;");
+        iconBox.getChildren().add(iconLbl);
+
+        VBox textBox = new VBox(4);
+        HBox.setHgrow(textBox, Priority.ALWAYS);
+        Label msgLbl = new Label(message);
+        msgLbl.setStyle(
+            "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
+            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+        msgLbl.setWrapText(true);
+        Label dateLbl = new Label(dateStr != null ? dateStr : "");
+        dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
+        textBox.getChildren().addAll(msgLbl, dateLbl);
+
+        if ("false".equals(isRead)) {
+            Circle dot = new Circle(4);
+            dot.setStyle("-fx-fill: #1565c0;");
+            row.getChildren().addAll(iconBox, textBox, dot);
+        } else {
+            Label readBadge = new Label("Read");
+            readBadge.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #aaaaaa;" +
+                "-fx-font-size: 9px; -fx-background-radius: 20; -fx-padding: 2 8;");
+            row.getChildren().addAll(iconBox, textBox, readBadge);
+        }
+
+        // Both unread and past are clickable — open detail modal
+        final String finalDateStr = dateStr;
+        row.setOnMouseClicked(e ->
+            showNotifDetail(notifId, type, message, finalDateStr,
+                icon, bg, isRead, loadNotifsRef, alertStage));
+
+        return new VBox(row);
+    }
+
+    private void showNotifDetail(String notifId, String type, String message,
+                                  String dateStr, String icon, String bg,
+                                  String isRead,
+                                  Runnable[] loadNotifsRef, Stage alertStage) {
+        Stage detail = new Stage();
+        detail.initModality(Modality.APPLICATION_MODAL);
+        detail.initOwner(alertStage);
+        detail.setTitle("Notification");
+        detail.setResizable(false);
+
+        VBox root = new VBox(0);
+        root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 440;");
+
+        // Header
+        VBox header = new VBox(6);
+        header.setFocusTraversable(true);
+        header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 22 28;");
+        Label titleLbl = new Label(
+            "complaint".equals(type) ? "Complaint Alert" :
+            "payment".equals(type)   ? "Payment Alert"   : "Announcement");
+        titleLbl.setStyle(
+            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        Label dateLbl = new Label(dateStr != null ? dateStr : "");
+        dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        header.getChildren().addAll(titleLbl, dateLbl);
+
+        // Body
+        VBox body = new VBox(20);
+        body.setStyle("-fx-padding: 28;");
+
+        // Icon + message
+        HBox iconRow = new HBox(16);
+        iconRow.setAlignment(Pos.CENTER_LEFT);
+        StackPane iconBox = new StackPane();
+        iconBox.setStyle(
+            "-fx-background-color: " + bg + "; -fx-background-radius: 12;" +
+            "-fx-min-width: 52; -fx-min-height: 52;" +
+            "-fx-max-width: 52; -fx-max-height: 52;");
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size: 22px;");
+        iconBox.getChildren().add(iconLbl);
+        Label msgLbl = new Label(message);
+        msgLbl.setStyle(
+            "-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;");
+        msgLbl.setWrapText(true);
+        HBox.setHgrow(msgLbl, Priority.ALWAYS);
+        iconRow.getChildren().addAll(iconBox, msgLbl);
+        body.getChildren().add(iconRow);
+
+        // Go to page button
+        String goToLabel =
+            "complaint".equals(type)   ? "→  Go to Complaints" :
+            "payment".equals(type)     ? "→  Go to Payments"   :
+                                         "→  Go to Announcements";
+        String goToFxml =
+            "complaint".equals(type)   ? "Complaints.fxml" :
+            "payment".equals(type)     ? "Payments.fxml"   :
+                                         "Announcements.fxml";
+
+        Button goToBtn = new Button(goToLabel);
+        goToBtn.setMaxWidth(Double.MAX_VALUE);
+        goToBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #1a1a1a;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 8; -fx-border-color: #e0e0e0;" +
+            "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
+            "-fx-alignment: CENTER_LEFT;");
+        goToBtn.setOnAction(e -> {
+            if ("false".equals(isRead)) markOneAsRead(notifId);
+            detail.close();
+            alertStage.close();
+            Stage stage = (Stage) logoutButton.getScene().getWindow();
+            SceneTransition.slideTo(stage, goToFxml, true, getClass());
+        });
+        body.getChildren().add(goToBtn);
+
+        // Footer
+        HBox footer = new HBox(10);
+        footer.setStyle(
+            "-fx-padding: 16 28 24 28; -fx-alignment: CENTER_RIGHT;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
+
+        Button cancelBtn = new Button("Close");
+        cancelBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+            "-fx-font-size: 12px; -fx-background-radius: 8;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+            "-fx-padding: 10 20; -fx-cursor: hand;");
+        cancelBtn.setOnAction(e -> detail.close());
+
+        Button markBtn = new Button("Mark as Read");
+        markBtn.setStyle(
+            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
+
+        if ("true".equals(isRead)) {
+            // Already read — only show Close
+            footer.getChildren().add(cancelBtn);
+        } else {
+            markBtn.setOnAction(e -> {
+                markOneAsRead(notifId);
+                detail.close();
+                if (loadNotifsRef[0] != null) loadNotifsRef[0].run();
+                refreshAlertBadge();
+            });
+            footer.getChildren().addAll(cancelBtn, markBtn);
+        }
+
+        root.getChildren().addAll(header, body, footer);
+        detail.setScene(new Scene(root));
+        Platform.runLater(() -> root.requestFocus());
+        detail.showAndWait();
+    }
+
+    // ── EXISTING METHODS ───────────────────────────────────────────────────────────
 
     private void loadSummary() {
         try {
@@ -347,73 +848,73 @@ public class ComplaintsController {
         }
     }
 
-        private void openResidentProfile(String complaintId, String name) {
-            try {
-                Connection conn = DatabaseConnection.getConnection();
-                // Get resident_id from complaints table first
-                PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT resident_id FROM complaints WHERE complaint_id = ?");
-                stmt.setString(1, complaintId);
-                ResultSet rs = stmt.executeQuery();
+    private void openResidentProfile(String complaintId, String name) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            // Get resident_id from complaints table first
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT resident_id FROM complaints WHERE complaint_id = ?");
+            stmt.setString(1, complaintId);
+            ResultSet rs = stmt.executeQuery();
 
-                if (!rs.next()) {
-                    rs.close(); stmt.close(); conn.close();
-                    showNotFound(name);
-                    return;
-                }
-
-                String residentId = rs.getString("resident_id");
-                rs.close(); stmt.close();
-
-                if (residentId == null || residentId.isEmpty()) {
-                    conn.close();
-                    showNotFound(name);
-                    return;
-                }
-
-                // Now look up resident by ID — no duplicate name problem
-                PreparedStatement stmt2 = conn.prepareStatement(
-                    "SELECT resident_id, full_name, age, address, status, date_added FROM residents WHERE resident_id = ?");
-                stmt2.setString(1, residentId);
-                ResultSet rs2 = stmt2.executeQuery();
-
-                if (rs2.next()) {
-                    String fullName = rs2.getString("full_name");
-                    int age = rs2.getInt("age");
-                    String address = rs2.getString("address");
-                    String status = rs2.getString("status");
-                    String dateAdded = rs2.getString("date_added");
-                    rs2.close(); stmt2.close(); conn.close();
-
-                    FXMLLoader loader = new FXMLLoader(
-                        getClass().getResource("ViewResidentModal.fxml"));
-                    Parent root = loader.load();
-                    ViewResidentController ctrl = loader.getController();
-                    ctrl.setResident(residentId, fullName, age, address, status, dateAdded);
-
-                    Stage stage = new Stage();
-                    stage.initModality(Modality.APPLICATION_MODAL);
-                    stage.initOwner(logoutButton.getScene().getWindow());
-                    stage.setTitle("Resident Profile");
-                    stage.setScene(new Scene(root));
-                    stage.setResizable(false);
-                    stage.showAndWait();
-                } else {
-                    rs2.close(); stmt2.close(); conn.close();
-                    showNotFound(name);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (!rs.next()) {
+                rs.close(); stmt.close(); conn.close();
+                showNotFound(name);
+                return;
             }
-        }
 
-        private void showNotFound(String name) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Not Found");
-            alert.setHeaderText("Resident not found");
-            alert.setContentText("No resident record found for: " + name);
-            alert.showAndWait();
+            String residentId = rs.getString("resident_id");
+            rs.close(); stmt.close();
+
+            if (residentId == null || residentId.isEmpty()) {
+                conn.close();
+                showNotFound(name);
+                return;
+            }
+
+            // Now look up resident by ID — no duplicate name problem
+            PreparedStatement stmt2 = conn.prepareStatement(
+                "SELECT resident_id, full_name, age, address, status, date_added FROM residents WHERE resident_id = ?");
+            stmt2.setString(1, residentId);
+            ResultSet rs2 = stmt2.executeQuery();
+
+            if (rs2.next()) {
+                String fullName = rs2.getString("full_name");
+                int age = rs2.getInt("age");
+                String address = rs2.getString("address");
+                String status = rs2.getString("status");
+                String dateAdded = rs2.getString("date_added");
+                rs2.close(); stmt2.close(); conn.close();
+
+                FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("ViewResidentModal.fxml"));
+                Parent root = loader.load();
+                ViewResidentController ctrl = loader.getController();
+                ctrl.setResident(residentId, fullName, age, address, status, dateAdded);
+
+                Stage stage = new Stage();
+                stage.initModality(Modality.APPLICATION_MODAL);
+                stage.initOwner(logoutButton.getScene().getWindow());
+                stage.setTitle("Resident Profile");
+                stage.setScene(new Scene(root));
+                stage.setResizable(false);
+                stage.showAndWait();
+            } else {
+                rs2.close(); stmt2.close(); conn.close();
+                showNotFound(name);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private void showNotFound(String name) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Not Found");
+        alert.setHeaderText("Resident not found");
+        alert.setContentText("No resident record found for: " + name);
+        alert.showAndWait();
+    }
 
     private void openComplaintModal(String complaintId, String name, String type,
             String location, String date, String status, String details,
@@ -430,7 +931,7 @@ public class ComplaintsController {
                 updateStatusTimestamp(complaintId);
                 loadComplaints();
                 loadSummary();
-                updateAlertBadge();
+                refreshAlertBadge();
             });
             Stage modalStage = new Stage();
             modalStage.initModality(Modality.APPLICATION_MODAL);
@@ -475,7 +976,7 @@ public class ComplaintsController {
                     conn.close();
                     loadComplaints();
                     loadSummary();
-                    updateAlertBadge();
+                    refreshAlertBadge();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -617,7 +1118,12 @@ public class ComplaintsController {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Finances.fxml", true, getClass());
     }
+    @FXML private void goToAdmin() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Admin.fxml", true, getClass());
+    }
     @FXML private void handleLogout() {
+        SessionManager.logout();
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "login.fxml", false, getClass());
     }
