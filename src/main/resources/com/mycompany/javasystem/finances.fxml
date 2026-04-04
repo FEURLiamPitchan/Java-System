@@ -10,6 +10,7 @@
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.mycompany.javasystem.FinancesController"
+            fx:id="rootPane"
             prefHeight="700.0" prefWidth="1100.0"
             style="-fx-background-color: #f0f2f5;"
             stylesheets="@style.css">
@@ -170,6 +171,19 @@
                            -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
+
+            <Region VBox.vgrow="ALWAYS"/>
+            <Separator style="-fx-opacity: 0.3;">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+            </Separator>
+            <Button text="⚙   Settings" maxWidth="Infinity"
+                    onAction="#goToSettings" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
         </VBox>
     </left>
 
@@ -301,11 +315,11 @@
                             <Label text="Income vs Expenses — hover bars for details"
                                    style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
                         </VBox>
-                            <BarChart fx:id="barChart" prefHeight="260" animated="false"
-                                      cache="true" cacheHint="SPEED"
-                                      style="-fx-background-color: transparent;
-                                             -fx-border-color: transparent;
-                                             -fx-padding: 0; -fx-background-insets: 0;">
+                        <BarChart fx:id="barChart" prefHeight="260" animated="false"
+                                  cache="true" cacheHint="SPEED"
+                                  style="-fx-background-color: transparent;
+                                         -fx-border-color: transparent;
+                                         -fx-padding: 0; -fx-background-insets: 0;">
                             <xAxis>
                                 <CategoryAxis style="-fx-tick-label-fill: #999999; -fx-font-size: 11px;"/>
                             </xAxis>
@@ -325,10 +339,10 @@
                             <Label text="By document type — hover for amounts"
                                    style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
                         </VBox>
-                            <PieChart fx:id="pieChart" prefHeight="260"
-                                      animated="false" legendVisible="true" labelsVisible="false"
-                                      cache="true" cacheHint="SPEED"
-                                      style="-fx-background-color: transparent; -fx-border-color: transparent;"/>
+                        <PieChart fx:id="pieChart" prefHeight="260"
+                                  animated="false" legendVisible="true" labelsVisible="false"
+                                  cache="true" cacheHint="SPEED"
+                                  style="-fx-background-color: transparent; -fx-border-color: transparent;"/>
                     </VBox>
                 </HBox>
 

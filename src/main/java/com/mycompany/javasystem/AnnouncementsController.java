@@ -9,6 +9,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -28,6 +29,8 @@ import java.util.List;
 
 public class AnnouncementsController {
 
+    @FXML private BorderPane rootPane;
+    @FXML private ScrollPane mainScrollPane;
     @FXML private VBox announcementsPane;
     @FXML private TextField searchField;
     @FXML private ComboBox<String> filterPriority;
@@ -62,6 +65,158 @@ public class AnnouncementsController {
         loadSummary();
         syncNotifications();
         refreshAlertBadge();
+
+        // Apply theme with delay
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) logoutButton.getScene().getWindow();
+                if (stage != null && stage.getScene() != null) {
+                    System.out.println("[AnnouncementsController] Applying theme - isDarkMode: " + ThemeManager.isDarkMode);
+                    ThemeManager.applyTheme(stage);
+
+                    if (ThemeManager.isDarkMode) {
+                        Platform.runLater(() -> {
+                            applyThemeToRoot();
+                            applyDarkModeOverrides();
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("[AnnouncementsController] Error applying theme: " + e.getMessage());
+            }
+        });
+    }
+
+    // ✅ Apply theme colors to entire page - DARK MODE (SIMPLIFIED)
+    private void applyThemeToRoot() {
+        if (!ThemeManager.isDarkMode) return;
+        
+        Platform.runLater(() -> {
+            try {
+                if (rootPane != null) {
+                    rootPane.setStyle("-fx-background-color: #0d0d0d;");
+                }
+                
+                if (mainScrollPane != null) {
+                    mainScrollPane.setStyle(
+                        "-fx-background-color: #0d0d0d;" +
+                        "-fx-background: #0d0d0d;" +
+                        "-fx-border-color: transparent;");
+                }
+                
+            } catch (Exception e) {
+                System.out.println("[AnnouncementsController] Error applying theme to root: " + e.getMessage());
+            }
+        });
+    }
+
+    // ✅ Apply dark mode specific overrides - CARDS & SUMMARY ONLY
+    private void applyDarkModeOverrides() {
+        try {
+            // Style all VBox cards (summary cards)
+            for (javafx.scene.Node node : rootPane.lookupAll(".vbox")) {
+                if (node instanceof VBox) {
+                    VBox vbox = (VBox) node;
+                    String style = vbox.getStyle();
+                    if (style != null && style.contains("-fx-background-color: #ffffff")) {
+                        vbox.setStyle(
+                            "-fx-background-color: #1a1a1a;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0, 0, 3);");
+                    }
+                }
+            }
+
+            // Style labels in summary cards
+            for (javafx.scene.Node node : rootPane.lookupAll(".label")) {
+                if (node instanceof Label) {
+                    Label label = (Label) node;
+                    String style = label.getStyle();
+                    if (style != null && !style.isEmpty()) {
+                        style = style.replace("-fx-text-fill: #1a1a1a;", "-fx-text-fill: #ffffff;");
+                        style = style.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                        style = style.replace("-fx-text-fill: #555555;", "-fx-text-fill: #b0b0b0;");
+                        style = style.replace("-fx-text-fill: #666666;", "-fx-text-fill: #aaaaaa;");
+                        style = style.replace("-fx-text-fill: #aaaaaa;", "-fx-text-fill: #888888;");
+                        label.setStyle(style);
+                    }
+                }
+            }
+
+            // Style buttons
+            for (javafx.scene.Node node : rootPane.lookupAll(".button")) {
+                if (node instanceof Button) {
+                    Button btn = (Button) node;
+                    String style = btn.getStyle();
+                    if (style != null && !style.isEmpty()) {
+                        if (style.contains("-fx-background-color: #f4f4f4") ||
+                            style.contains("-fx-background-color: #f8f9fa") ||
+                            style.contains("-fx-background-color: #ffffff")) {
+                            style = style.replace("-fx-background-color: #f4f4f4;", "-fx-background-color: #2a2a2a;");
+                            style = style.replace("-fx-background-color: #f8f9fa;", "-fx-background-color: #2a2a2a;");
+                            style = style.replace("-fx-background-color: #ffffff;", "-fx-background-color: #2a2a2a;");
+                            style = style.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                            style = style.replace("-fx-text-fill: #555555;", "-fx-text-fill: #b0b0b0;");
+                            style = style.replace("-fx-text-fill: #777777;", "-fx-text-fill: #aaaaaa;");
+                            btn.setStyle(style);
+                        }
+                    }
+                }
+            }
+
+            // Style announcement cards in pane
+            for (javafx.scene.Node node : announcementsPane.getChildren()) {
+                if (node instanceof VBox) {
+                    VBox card = (VBox) node;
+                    String style = card.getStyle();
+                    if (style != null && style.contains("-fx-background-color: #ffffff")) {
+                        style = style.replace("-fx-background-color: #ffffff", "-fx-background-color: #1a1a1a");
+                        card.setStyle(style);
+                        
+                        // Style text in card
+                        for (javafx.scene.Node child : card.getChildren()) {
+                            styleNodeDarkMode(child);
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("[AnnouncementsController] Error applying dark mode overrides: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void styleNodeDarkMode(javafx.scene.Node node) {
+        if (node instanceof Label) {
+            Label lbl = (Label) node;
+            String style = lbl.getStyle();
+            if (style != null) {
+                style = style.replace("-fx-text-fill: #1a1a1a;", "-fx-text-fill: #ffffff;");
+                style = style.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                style = style.replace("-fx-text-fill: #666666;", "-fx-text-fill: #b0b0b0;");
+                style = style.replace("-fx-text-fill: #777777;", "-fx-text-fill: #aaaaaa;");
+                lbl.setStyle(style);
+            }
+        } else if (node instanceof Button) {
+            Button btn = (Button) node;
+            String style = btn.getStyle();
+            if (style != null) {
+                style = style.replace("-fx-background-color: #f4f4f4;", "-fx-background-color: #2a2a2a;");
+                style = style.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                style = style.replace("-fx-text-fill: #e53935;", "-fx-text-fill: #ff6b6b;");
+                btn.setStyle(style);
+            }
+        } else if (node instanceof HBox) {
+            HBox hbox = (HBox) node;
+            for (javafx.scene.Node child : hbox.getChildren()) {
+                styleNodeDarkMode(child);
+            }
+        } else if (node instanceof VBox) {
+            VBox vbox = (VBox) node;
+            for (javafx.scene.Node child : vbox.getChildren()) {
+                styleNodeDarkMode(child);
+            }
+        }
     }
 
     // ── TOP BAR ────────────────────────────────────────────────────────────────────
@@ -463,7 +618,6 @@ public class AnnouncementsController {
             row.getChildren().addAll(iconBox, textBox, readBadge);
         }
 
-        // Both unread and past are clickable — open detail modal
         final String finalDateStr = dateStr;
         row.setOnMouseClicked(e ->
             showNotifDetail(notifId, type, message, finalDateStr,
@@ -485,7 +639,6 @@ public class AnnouncementsController {
         VBox root = new VBox(0);
         root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 440;");
 
-        // Header
         VBox header = new VBox(6);
         header.setFocusTraversable(true);
         header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 22 28;");
@@ -498,11 +651,9 @@ public class AnnouncementsController {
         dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(titleLbl, dateLbl);
 
-        // Body
         VBox body = new VBox(20);
         body.setStyle("-fx-padding: 28;");
 
-        // Icon + message
         HBox iconRow = new HBox(16);
         iconRow.setAlignment(Pos.CENTER_LEFT);
         StackPane iconBox = new StackPane();
@@ -521,7 +672,6 @@ public class AnnouncementsController {
         iconRow.getChildren().addAll(iconBox, msgLbl);
         body.getChildren().add(iconRow);
 
-        // Go to page button
         String goToLabel =
             "complaint".equals(type)   ? "→  Go to Complaints" :
             "payment".equals(type)     ? "→  Go to Payments"   :
@@ -548,7 +698,6 @@ public class AnnouncementsController {
         });
         body.getChildren().add(goToBtn);
 
-        // Footer
         HBox footer = new HBox(10);
         footer.setStyle(
             "-fx-padding: 16 28 24 28; -fx-alignment: CENTER_RIGHT;" +
@@ -569,7 +718,6 @@ public class AnnouncementsController {
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
         if ("true".equals(isRead)) {
-            // Already read — only show Close
             footer.getChildren().add(cancelBtn);
         } else {
             markBtn.setOnAction(e -> {
@@ -762,7 +910,6 @@ public class AnnouncementsController {
                 prioBg = "#e8f5e9"; prioFg = "#4caf50"; borderColor = "#c8e6c9"; break;
         }
 
-        // 0 or null = Auto 
         int maxLen;
         if (previewLen == null || previewLen.isEmpty() ||
                 previewLen.equals("0") || previewLen.equals("0.0")) {
@@ -960,6 +1107,10 @@ public class AnnouncementsController {
     @FXML private void goToAdmin() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Admin.fxml", true, getClass());
+    }
+    @FXML private void goToSettings() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Settings.fxml", true, getClass());
     }
     @FXML private void handleLogout() {
         SessionManager.logout();

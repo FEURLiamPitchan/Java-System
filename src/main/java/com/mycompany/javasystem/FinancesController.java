@@ -14,7 +14,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.stage.Modality;
@@ -69,6 +72,7 @@ public class FinancesController {
     @FXML private BarChart<String, Number> barChart;
     @FXML private PieChart pieChart;
     @FXML private ScrollPane mainScrollPane;
+    @FXML private BorderPane rootPane;
 
     @FXML
     public void initialize() {
@@ -93,6 +97,27 @@ public class FinancesController {
         pieChart.setCache(true);
         pieChart.setCacheHint(CacheHint.SPEED);
 
+        // Apply theme with delay to allow nodes to render
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) logoutButton.getScene().getWindow();
+                if (stage != null && stage.getScene() != null) {
+                    System.out.println("[FinancesController] Applying theme - isDarkMode: " + ThemeManager.isDarkMode);
+                    ThemeManager.applyTheme(stage);
+
+                    // Apply dark mode specific fixes after a small delay
+                    if (ThemeManager.isDarkMode) {
+                        Platform.runLater(() -> {
+                            applyThemeToRoot();
+                            applyDarkModeOverrides();
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("[FinancesController] Error applying theme: " + e.getMessage());
+            }
+        });
+
         Platform.runLater(() -> {
             if (mainScrollPane != null) {
                 mainScrollPane.getContent().setOnScroll(event -> {
@@ -110,6 +135,238 @@ public class FinancesController {
         });
     }
 
+    // ✅ Apply theme colors to entire page - DARK MODE (SIMPLIFIED)
+    private void applyThemeToRoot() {
+        if (!ThemeManager.isDarkMode) return;
+        
+        Platform.runLater(() -> {
+            try {
+                // Just set the background colors - NO node manipulation
+                if (rootPane != null) {
+                    rootPane.setStyle("-fx-background-color: #0d0d0d;");
+                }
+                
+                if (mainScrollPane != null) {
+                    mainScrollPane.setStyle(
+                        "-fx-background-color: #0d0d0d;" +
+                        "-fx-background: #0d0d0d;" +
+                        "-fx-border-color: transparent;");
+                }
+                
+            } catch (Exception e) {
+                System.out.println("[FinancesController] Error applying theme to root: " + e.getMessage());
+            }
+        });
+    }
+
+    // ✅ Apply dark mode specific overrides - CHARTS & TABLES ONLY
+    private void applyDarkModeOverrides() {
+        try {
+            // Fix stat boxes with emoji colors
+            fixStatBox(totalCollectionsLabel);
+            fixStatBox(totalExpensesLabel);
+            fixStatBox(netBalanceLabel);
+            fixStatBox(pendingLabel);
+
+            // ✅ Fix Bar Chart with aggressive styling
+            if (barChart != null) {
+                barChart.setStyle(
+                    "-fx-background-color: #1a1a1a;" +
+                    "-fx-text-fill: #e8e8e8;");
+
+                // Style chart plot background
+                for (Node node : barChart.lookupAll(".chart-plot-background")) {
+                    node.setStyle(
+                        "-fx-background-color: #1a1a1a !important;" +
+                        "-fx-background-radius: 8;");
+                }
+
+                // ✅ Style chart legend
+                for (Node node : barChart.lookupAll(".chart-legend")) {
+                    node.setStyle(
+                        "-fx-background-color: #1a1a1a !important;" +
+                        "-fx-text-fill: #e8e8e8 !important;");
+                }
+
+                // ✅ Style legend items
+                for (Node node : barChart.lookupAll(".chart-legend-item")) {
+                    node.setStyle(
+                        "-fx-text-fill: #e8e8e8 !important;" +
+                        "-fx-font-size: 12px;" +
+                        "-fx-background-color: transparent !important;");
+                }
+
+                // ✅ Fix legend item symbols
+                Platform.runLater(() -> {
+                    int index = 0;
+                    for (Node node : barChart.lookupAll(".chart-legend-item-symbol")) {
+                        if (index == 0) {
+                            node.setStyle("-fx-background-color: #43a047 !important;");
+                        } else {
+                            node.setStyle("-fx-background-color: #e53935 !important;");
+                        }
+                        index++;
+                    }
+                });
+
+                // Style axis labels
+                for (Node node : barChart.lookupAll(".axis-label")) {
+                    node.setStyle("-fx-text-fill: #b0b0b0 !important;");
+                }
+
+                // Style tick labels
+                for (Node node : barChart.lookupAll(".axis")) {
+                    node.setStyle("-fx-tick-label-fill: #b0b0b0 !important;");
+                }
+
+                // ✅ FORCE bar colors
+                Platform.runLater(() -> {
+                    for (XYChart.Series<String, Number> series : barChart.getData()) {
+                        for (XYChart.Data<String, Number> data : series.getData()) {
+                            Node node = data.getNode();
+                            if (node != null) {
+                                if (series.getName().equals("Income")) {
+                                    node.setStyle("-fx-bar-fill: #43a047 !important;");
+                                } else if (series.getName().equals("Expenses")) {
+                                    node.setStyle("-fx-bar-fill: #e53935 !important;");
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // ✅ Fix Pie Chart
+            if (pieChart != null) {
+                pieChart.setStyle(
+                    "-fx-background-color: #1a1a1a;" +
+                    "-fx-text-fill: #e8e8e8;");
+
+                for (Node node : pieChart.lookupAll(".chart-plot-background")) {
+                    node.setStyle(
+                        "-fx-background-color: #1a1a1a !important;" +
+                        "-fx-background-radius: 8;");
+                }
+
+                for (Node node : pieChart.lookupAll(".chart-legend")) {
+                    node.setStyle(
+                        "-fx-background-color: #1a1a1a !important;" +
+                        "-fx-text-fill: #e8e8e8 !important;");
+                }
+
+                for (Node node : pieChart.lookupAll(".chart-legend-item")) {
+                    node.setStyle(
+                        "-fx-text-fill: #e8e8e8 !important;" +
+                        "-fx-font-size: 12px;" +
+                        "-fx-background-color: transparent !important;");
+                }
+
+                for (Node node : pieChart.lookupAll(".chart-pie-label")) {
+                    node.setStyle("-fx-fill: #b0b0b0 !important;");
+                }
+            }
+
+            // ✅ Fix Table
+            if (transactionTable != null) {
+                transactionTable.setStyle(
+                    "-fx-background-color: #1e1e1e;" +
+                    "-fx-control-inner-background: #1e1e1e;" +
+                    "-fx-text-fill: #e8e8e8;");
+
+                for (Node node : transactionTable.lookupAll(".column-header-background")) {
+                    node.setStyle(
+                        "-fx-background-color: #2a2a2a !important;" +
+                        "-fx-border-color: #404040;");
+                }
+
+                for (Node node : transactionTable.lookupAll(".column-header")) {
+                    node.setStyle(
+                        "-fx-background-color: #2a2a2a !important;" +
+                        "-fx-border-color: #404040 !important;" +
+                        "-fx-text-fill: #e8e8e8;");
+                }
+
+                for (Node node : transactionTable.lookupAll(".column-header .label")) {
+                    node.setStyle(
+                        "-fx-text-fill: #e8e8e8 !important;" +
+                        "-fx-font-size: 11px;" +
+                        "-fx-font-weight: bold;");
+                }
+
+                for (Node node : transactionTable.lookupAll(".table-cell")) {
+                    node.setStyle(
+                        "-fx-background-color: #1e1e1e !important;" +
+                        "-fx-text-fill: #e8e8e8 !important;" +
+                        "-fx-border-color: #404040;");
+                }
+
+                for (Node node : transactionTable.lookupAll(".table-row-cell")) {
+                    node.setStyle(
+                        "-fx-background-color: #1e1e1e !important;" +
+                        "-fx-text-fill: #e8e8e8 !important;" +
+                        "-fx-border-color: transparent transparent #404040 transparent;" +
+                        "-fx-border-width: 0 0 1 0;");
+                }
+
+                for (Node node : transactionTable.lookupAll(".filler")) {
+                    node.setStyle("-fx-background-color: #2a2a2a !important;");
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("[FinancesController] Error applying dark mode overrides: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // ✅ Helper method to fix stat box backgrounds
+    private void fixStatBox(Label label) {
+        if (label != null && label.getParent() != null) {
+            Node parent = label.getParent();
+            while (parent != null && !(parent instanceof Region)) {
+                parent = parent.getParent();
+            }
+            if (parent instanceof Region) {
+                if (ThemeManager.isDarkMode) {
+                    ((Region) parent).setStyle(
+                        "-fx-background-color: #1a1a1a;" +
+                        "-fx-text-fill: #e8e8e8;" +
+                        "-fx-padding: 20;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #2a2a2a;" +
+                        "-fx-border-width: 1;");
+                    
+                    label.setStyle(
+                        "-fx-text-fill: #ffffff !important;" +
+                        "-fx-font-size: 30px; -fx-font-weight: bold;");
+                    
+                    for (Node node : parent.lookupAll(".label")) {
+                        if (node instanceof Label && node != label) {
+                            Label lbl = (Label) node;
+                            String text = lbl.getText();
+                            // Force emojis to BLACK
+                            if (text != null && text.matches(".*[💰📉⚖️⏳].*")) {
+                                lbl.setStyle("-fx-text-fill: #000000 !important; -fx-font-size: 16px;");
+                            } else {
+                                String currentStyle = lbl.getStyle();
+                                if (currentStyle == null || currentStyle.isEmpty()) {
+                                    lbl.setStyle("-fx-text-fill: #e8e8e8 !important;");
+                                } else {
+                                    lbl.setStyle(currentStyle + "; -fx-text-fill: #e8e8e8 !important;");
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    ((Region) parent).setStyle(
+                        "-fx-background-color: #ffffff;" +
+                        "-fx-text-fill: #333333;" +
+                        "-fx-padding: 20;" +
+                        "-fx-background-radius: 12;");
+                }
+            }
+        }
+    }
     // ── TOP BAR ───────────────────────────────────────────────────────────────────
     private void loadTopBar() {
         String name = SessionManager.getName();
@@ -752,7 +1009,7 @@ public class FinancesController {
         });
     }
 
-    // ── Summary ──────────────���────────────────────────────────────────────────────
+    // ── Summary ──────────────────────────────────────────────────��────────────────
     private void loadSummary() {
         double totalIncome = 0, totalExpenses = 0;
         int pending = 0;
@@ -891,8 +1148,8 @@ public class FinancesController {
         }
         barChart.getData().addAll(incomeSeries, expenseSeries);
     }
-
-    // ── Pie Chart ────────────���────────────────────────────────────────────────────
+    
+    // ── Pie Chart ─────────────────────────────────────────────────────────────────
     private void loadPieChart() {
         pieChart.getData().clear();
         Map<String, double[]> typeMap = new LinkedHashMap<>();
@@ -917,36 +1174,45 @@ public class FinancesController {
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
 
-        String[] colors = {"#43a047", "#1e88e5", "#f59e0b"};
-        int i = 0;
+        // ✅ FIXED: Map colors directly to payment types
+        Map<String, String> colorMap = new LinkedHashMap<>();
+        colorMap.put("Clearance", "#43a047");   // GREEN
+        colorMap.put("Indigency", "#1e88e5");   // BLUE
+        colorMap.put("Residency", "#fdd835");   // YELLOW
+
         for (Map.Entry<String, double[]> entry : typeMap.entrySet()) {
             double amt = entry.getValue()[0];
             int    cnt = (int) entry.getValue()[1];
             if (amt > 0) {
                 PieChart.Data slice = new PieChart.Data(entry.getKey(), amt);
                 pieChart.getData().add(slice);
-                final String color = colors[i % colors.length];
+                final String color = colorMap.get(entry.getKey());
                 final String tipText = "📄 " + entry.getKey() +
                     "\n₱" + String.format("%,.2f", amt) +
                     "\n" + cnt + " payment" + (cnt != 1 ? "s" : "");
+
                 slice.nodeProperty().addListener((obs, old, node) -> {
                     if (node != null) {
-                        node.setStyle("-fx-pie-color: " + color + ";");
+                        // ✅ Force the color with high priority
+                        node.setStyle("-fx-pie-color: " + color + " !important;");
+
                         Tooltip tip = new Tooltip(tipText);
                         tip.setStyle("-fx-font-size: 12px; -fx-background-color: #1a1a1a;" +
                             "-fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 8 12;");
                         tip.setShowDelay(Duration.millis(80));
                         tip.setHideDelay(Duration.millis(200));
                         Tooltip.install(node, tip);
+
                         node.setOnMouseEntered(e -> node.setStyle(
                             "-fx-pie-color: " + color + "; -fx-opacity: 0.8;"));
                         node.setOnMouseExited(e -> node.setStyle(
                             "-fx-pie-color: " + color + "; -fx-opacity: 1.0;"));
                     }
                 });
-                i++;
             }
         }
+
+        // ✅ If no data, add empty state
         if (pieChart.getData().isEmpty())
             pieChart.getData().add(new PieChart.Data("No data yet", 1));
     }
@@ -1514,5 +1780,9 @@ public class FinancesController {
         SessionManager.logout();
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "login.fxml", false, getClass());
+    }
+    @FXML private void goToSettings() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Settings.fxml", true, getClass());
     }
 }

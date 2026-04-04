@@ -11,7 +11,12 @@ public class SceneTransition {
             Parent newRoot = FXMLLoader.load(context.getResource(fxml));
             stage.setMaximized(maximize);
             stage.getScene().setRoot(newRoot);
+            
             Platform.runLater(() -> {
+                // Apply theme to new scene
+                ThemeManager.loadThemePreference();
+                ThemeManager.applyTheme(stage);
+                
                 Platform.runLater(() -> {
                     newRoot.requestFocus();
                 });

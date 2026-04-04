@@ -9,6 +9,7 @@
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.mycompany.javasystem.AdminController"
+            fx:id="rootPane"
             prefHeight="700.0" prefWidth="1100.0"
             style="-fx-background-color: #f0f2f5;"
             stylesheets="@style.css">
@@ -169,6 +170,19 @@
                            -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
+
+            <Region VBox.vgrow="ALWAYS"/>
+            <Separator style="-fx-opacity: 0.3;">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+            </Separator>
+            <Button text="⚙   Settings" maxWidth="Infinity"
+                    onAction="#goToSettings" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
         </VBox>
     </left>
 

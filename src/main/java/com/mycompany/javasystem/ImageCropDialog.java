@@ -126,7 +126,10 @@ public class ImageCropDialog {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-border-color: #e0e0e0;" +
             "-fx-border-width: 1; -fx-padding: 10 20; -fx-cursor: hand;");
-        cancelBtn.setOnAction(e -> dialog.close());
+        cancelBtn.setOnAction(e -> {
+            resultBase64 = null;
+            dialog.close();
+        });
 
         Button saveBtn = new Button("Crop & Save");
         saveBtn.setStyle(
@@ -134,7 +137,10 @@ public class ImageCropDialog {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
         saveBtn.setOnAction(e -> {
+            System.out.println("[ImageCropDialog] Crop & Save clicked");
+            System.out.println("[ImageCropDialog] cropX: " + cropX + ", cropY: " + cropY + ", cropSize: " + cropSize);
             cropImage();
+            System.out.println("[ImageCropDialog] resultBase64: " + (resultBase64 != null && !resultBase64.isEmpty() ? "✓ Generated" : "✗ Failed"));
             dialog.close();
         });
 
@@ -153,6 +159,7 @@ public class ImageCropDialog {
         dialog.setScene(new Scene(root));
         dialog.showAndWait();
 
+        System.out.println("[ImageCropDialog] Dialog closed, returning: " + (resultBase64 != null ? "base64" : "null"));
         return resultBase64;
     }
 
@@ -382,35 +389,53 @@ public class ImageCropDialog {
 
     private void cropImage() {
         try {
-            javafx.scene.image.PixelReader reader = originalImage.getPixelReader();
-            javafx.scene.image.WritableImage croppedImage =
-                new javafx.scene.image.WritableImage(
-                    (int)cropSize, (int)cropSize);
-
+            System.out.println("[ImageCropDialog] Starting crop image process");
+            
+            // Convert canvas coordinates to original image coordinates
             double imgW = originalImage.getWidth();
             double imgH = originalImage.getHeight();
+            
+            // Calculate source coordinates in the original image
+            int srcX = (int)((cropX - offsetX) / scale);
+            int srcY = (int)((cropY - offsetY) / scale);
+            int srcSize = (int)(cropSize / scale);
+            
+            System.out.println("[ImageCropDialog] Source: X=" + srcX + " Y=" + srcY + " Size=" + srcSize);
+            System.out.println("[ImageCropDialog] Original image size: " + imgW + "x" + imgH);
+            
+            // Clamp to image boundaries
+            srcX = Math.max(0, Math.min(srcX, (int)imgW - 1));
+            srcY = Math.max(0, Math.min(srcY, (int)imgH - 1));
+            srcSize = Math.min(srcSize, (int)Math.min(imgW - srcX, imgH - srcY));
+            
+            System.out.println("[ImageCropDialog] Clamped source: X=" + srcX + " Y=" + srcY + " Size=" + srcSize);
 
-            for (int y = 0; y < cropSize; y++) {
-                for (int x = 0; x < cropSize; x++) {
-                    int srcX = (int)((cropX - offsetX + x) / scale);
-                    int srcY = (int)((cropY - offsetY + y) / scale);
-                    if (srcX >= 0 && srcX < imgW &&
-                        srcY >= 0 && srcY < imgH) {
+            javafx.scene.image.PixelReader reader = originalImage.getPixelReader();
+            javafx.scene.image.WritableImage croppedImage =
+                new javafx.scene.image.WritableImage(srcSize, srcSize);
+
+            for (int y = 0; y < srcSize; y++) {
+                for (int x = 0; x < srcSize; x++) {
+                    int readX = srcX + x;
+                    int readY = srcY + y;
+                    if (readX >= 0 && readX < imgW && readY >= 0 && readY < imgH) {
                         croppedImage.getPixelWriter().setArgb(x, y,
-                            reader.getArgb(srcX, srcY));
+                            reader.getArgb(readX, readY));
                     }
                 }
             }
 
-            javafx.embed.swing.SwingFXUtils.fromFXImage(croppedImage, null);
             java.awt.image.BufferedImage awtImage =
                 javafx.embed.swing.SwingFXUtils.fromFXImage(croppedImage, null);
             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             javax.imageio.ImageIO.write(awtImage, "png", baos);
             byte[] bytes = baos.toByteArray();
             resultBase64 = Base64.getEncoder().encodeToString(bytes);
+            
+            System.out.println("[ImageCropDialog] Crop successful - base64 length: " + resultBase64.length());
 
         } catch (Exception e) {
+            System.out.println("[ImageCropDialog] Error during crop: " + e.getMessage());
             e.printStackTrace();
         }
     }

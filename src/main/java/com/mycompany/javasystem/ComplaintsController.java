@@ -27,6 +27,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -47,6 +48,8 @@ import java.util.List;
 
 public class ComplaintsController {
 
+    @FXML private BorderPane rootPane;
+    @FXML private ScrollPane mainScrollPane;
     @FXML private VBox complaintsTableBody;
     @FXML private TextField searchField;
     @FXML private ComboBox<String> filterStatus;
@@ -95,6 +98,137 @@ public class ComplaintsController {
         loadSummary();
         syncNotifications();
         refreshAlertBadge();
+
+        // Apply theme with delay
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) logoutButton.getScene().getWindow();
+                if (stage != null && stage.getScene() != null) {
+                    System.out.println("[ComplaintsController] Applying theme - isDarkMode: " + ThemeManager.isDarkMode);
+                    ThemeManager.applyTheme(stage);
+
+                    if (ThemeManager.isDarkMode) {
+                        Platform.runLater(() -> {
+                            applyThemeToRoot();
+                            applyDarkModeOverrides();
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("[ComplaintsController] Error applying theme: " + e.getMessage());
+            }
+        });
+    }
+
+    // ✅ Apply theme colors to entire page - DARK MODE (SIMPLIFIED)
+    private void applyThemeToRoot() {
+        if (!ThemeManager.isDarkMode) return;
+        
+        Platform.runLater(() -> {
+            try {
+                if (rootPane != null) {
+                    rootPane.setStyle("-fx-background-color: #0d0d0d;");
+                }
+                
+                if (mainScrollPane != null) {
+                    mainScrollPane.setStyle(
+                        "-fx-background-color: #0d0d0d;" +
+                        "-fx-background: #0d0d0d;" +
+                        "-fx-border-color: transparent;");
+                }
+                
+            } catch (Exception e) {
+                System.out.println("[ComplaintsController] Error applying theme to root: " + e.getMessage());
+            }
+        });
+    }
+
+    // ✅ Apply dark mode specific overrides - TABLES & CARDS ONLY
+    private void applyDarkModeOverrides() {
+        try {
+            // Style all VBox cards (summary cards)
+            for (javafx.scene.Node node : rootPane.lookupAll(".vbox")) {
+                if (node instanceof VBox) {
+                    VBox vbox = (VBox) node;
+                    String style = vbox.getStyle();
+                    if (style != null && style.contains("-fx-background-color: #ffffff")) {
+                        vbox.setStyle(
+                            "-fx-background-color: #1a1a1a;" +
+                            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 12, 0, 0, 3);");
+                    }
+                }
+            }
+
+            // Style labels in summary cards
+            for (javafx.scene.Node node : rootPane.lookupAll(".label")) {
+                if (node instanceof Label) {
+                    Label label = (Label) node;
+                    String style = label.getStyle();
+                    if (style != null && !style.isEmpty()) {
+                        style = style.replace("-fx-text-fill: #1a1a1a;", "-fx-text-fill: #ffffff;");
+                        style = style.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                        style = style.replace("-fx-text-fill: #555555;", "-fx-text-fill: #b0b0b0;");
+                        style = style.replace("-fx-text-fill: #aaaaaa;", "-fx-text-fill: #888888;");
+                        style = style.replace("-fx-text-fill: #bbbbbb;", "-fx-text-fill: #777777;");
+                        label.setStyle(style);
+                    }
+                }
+            }
+
+            // Style buttons
+            for (javafx.scene.Node node : rootPane.lookupAll(".button")) {
+                if (node instanceof Button) {
+                    Button btn = (Button) node;
+                    String style = btn.getStyle();
+                    if (style != null && !style.isEmpty()) {
+                        if (style.contains("-fx-background-color: #f4f4f4") ||
+                            style.contains("-fx-background-color: #f8f9fa") ||
+                            style.contains("-fx-background-color: #ffffff")) {
+                            style = style.replace("-fx-background-color: #f4f4f4;", "-fx-background-color: #2a2a2a;");
+                            style = style.replace("-fx-background-color: #f8f9fa;", "-fx-background-color: #2a2a2a;");
+                            style = style.replace("-fx-background-color: #ffffff;", "-fx-background-color: #2a2a2a;");
+                            style = style.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                            style = style.replace("-fx-text-fill: #555555;", "-fx-text-fill: #b0b0b0;");
+                            btn.setStyle(style);
+                        }
+                    }
+                }
+            }
+
+            // Style table body rows
+            for (javafx.scene.Node node : complaintsTableBody.getChildren()) {
+                if (node instanceof HBox) {
+                    HBox row = (HBox) node;
+                    String style = row.getStyle();
+                    if (style != null) {
+                        style = style.replace("-fx-background-color: transparent", "-fx-background-color: #1a1a1a");
+                        style = style.replace("-fx-border-color: #f8f8f8", "-fx-border-color: #404040");
+                    }
+                    row.setStyle(style != null ? style : "-fx-background-color: #1a1a1a; -fx-border-color: #404040;");
+                    
+                    // Style text in row
+                    for (javafx.scene.Node child : row.getChildren()) {
+                        if (child instanceof Label) {
+                            Label lbl = (Label) child;
+                            String lblStyle = lbl.getStyle();
+                            if (lblStyle != null) {
+                                lblStyle = lblStyle.replace("-fx-text-fill: #333333;", "-fx-text-fill: #e8e8e8;");
+                                lblStyle = lblStyle.replace("-fx-text-fill: #555555;", "-fx-text-fill: #b0b0b0;");
+                                lblStyle = lblStyle.replace("-fx-text-fill: #1a1a1a;", "-fx-text-fill: #ffffff;");
+                                lbl.setStyle(lblStyle);
+                            }
+                        } else if (child instanceof Hyperlink) {
+                            Hyperlink link = (Hyperlink) child;
+                            link.setStyle("-fx-text-fill: #64b5f6; -fx-padding: 0; -fx-border-color: transparent;");
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("[ComplaintsController] Error applying dark mode overrides: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // ── TOP BAR ────────────────────────────────────────────────────────────────────
@@ -496,7 +630,6 @@ public class ComplaintsController {
             row.getChildren().addAll(iconBox, textBox, readBadge);
         }
 
-        // Both unread and past are clickable — open detail modal
         final String finalDateStr = dateStr;
         row.setOnMouseClicked(e ->
             showNotifDetail(notifId, type, message, finalDateStr,
@@ -518,7 +651,6 @@ public class ComplaintsController {
         VBox root = new VBox(0);
         root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 440;");
 
-        // Header
         VBox header = new VBox(6);
         header.setFocusTraversable(true);
         header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 22 28;");
@@ -531,11 +663,9 @@ public class ComplaintsController {
         dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(titleLbl, dateLbl);
 
-        // Body
         VBox body = new VBox(20);
         body.setStyle("-fx-padding: 28;");
 
-        // Icon + message
         HBox iconRow = new HBox(16);
         iconRow.setAlignment(Pos.CENTER_LEFT);
         StackPane iconBox = new StackPane();
@@ -554,7 +684,6 @@ public class ComplaintsController {
         iconRow.getChildren().addAll(iconBox, msgLbl);
         body.getChildren().add(iconRow);
 
-        // Go to page button
         String goToLabel =
             "complaint".equals(type)   ? "→  Go to Complaints" :
             "payment".equals(type)     ? "→  Go to Payments"   :
@@ -581,7 +710,6 @@ public class ComplaintsController {
         });
         body.getChildren().add(goToBtn);
 
-        // Footer
         HBox footer = new HBox(10);
         footer.setStyle(
             "-fx-padding: 16 28 24 28; -fx-alignment: CENTER_RIGHT;" +
@@ -602,7 +730,6 @@ public class ComplaintsController {
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
         if ("true".equals(isRead)) {
-            // Already read — only show Close
             footer.getChildren().add(cancelBtn);
         } else {
             markBtn.setOnAction(e -> {
@@ -674,18 +801,14 @@ public class ComplaintsController {
                 String statusChangedAt = rs.getString("status_changed_at");
                 boolean isRead = rs.getBoolean("is_read");
 
-                // Search filter
                 if (!search.isEmpty() &&
                     !name.toLowerCase().contains(search.toLowerCase()) &&
                     !complaintId.toLowerCase().contains(search.toLowerCase())) continue;
 
-                // Status filter
                 if (!status.equals("All") && !complaintStatus.equals(status)) continue;
 
-                // Type filter
                 if (!type.equals("All") && !incidentType.equals(type)) continue;
 
-                // Date range filter
                 if (dateFiled != null && !dateFiled.isEmpty()) {
                     try {
                         LocalDate filed = null;
@@ -778,7 +901,6 @@ public class ComplaintsController {
             idLabel.setPrefWidth(100);
             idLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
-            // Clickable name opens resident profile
             Hyperlink nameLink = new Hyperlink(name);
             nameLink.setPrefWidth(180);
             nameLink.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;" +
@@ -794,7 +916,6 @@ public class ComplaintsController {
             locationLabel.setPrefWidth(160);
             locationLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
-            // Date + status changed timestamp
             String dateDisplay = dateFiled != null ? dateFiled : "N/A";
             if (!statusChangedAt.isEmpty()) {
                 dateDisplay += "\n⏱ " + statusChangedAt;
@@ -851,7 +972,6 @@ public class ComplaintsController {
     private void openResidentProfile(String complaintId, String name) {
         try {
             Connection conn = DatabaseConnection.getConnection();
-            // Get resident_id from complaints table first
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT resident_id FROM complaints WHERE complaint_id = ?");
             stmt.setString(1, complaintId);
@@ -872,7 +992,6 @@ public class ComplaintsController {
                 return;
             }
 
-            // Now look up resident by ID — no duplicate name problem
             PreparedStatement stmt2 = conn.prepareStatement(
                 "SELECT resident_id, full_name, age, address, status, date_added FROM residents WHERE resident_id = ?");
             stmt2.setString(1, residentId);
@@ -927,7 +1046,6 @@ public class ComplaintsController {
             ctrl.setComplaint(complaintId, name, type, location, date,
                     status, details, photoPath, adminResponse);
             ctrl.setOnUpdate(() -> {
-                // Update status_changed_at when status changes
                 updateStatusTimestamp(complaintId);
                 loadComplaints();
                 loadSummary();
@@ -1032,7 +1150,6 @@ public class ComplaintsController {
             PdfWriter.getInstance(document, new FileOutputStream(file));
             document.open();
 
-            // Title
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD);
             Paragraph title = new Paragraph("Barangay San Isidro - Complaints Report", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
@@ -1045,7 +1162,6 @@ public class ComplaintsController {
             date.setSpacingAfter(16);
             document.add(date);
 
-            // Table
             PdfPTable table = new PdfPTable(7);
             table.setWidthPercentage(100);
             table.setWidths(new float[]{1.2f, 2f, 1.8f, 1.8f, 1.4f, 1.4f, 2.5f});
@@ -1121,6 +1237,10 @@ public class ComplaintsController {
     @FXML private void goToAdmin() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Admin.fxml", true, getClass());
+    }
+    @FXML private void goToSettings() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Settings.fxml", true, getClass());
     }
     @FXML private void handleLogout() {
         SessionManager.logout();

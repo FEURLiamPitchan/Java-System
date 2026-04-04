@@ -9,6 +9,7 @@
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.mycompany.javasystem.AnnouncementsController"
+            fx:id="rootPane"
             prefHeight="700.0" prefWidth="1100.0"
             style="-fx-background-color: #f4f4f4;"
             stylesheets="@style.css">
@@ -183,139 +184,157 @@
                            -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
+
+            <Region VBox.vgrow="ALWAYS"/>
+            <Separator style="-fx-opacity: 0.3;">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+            </Separator>
+            <Button text="⚙   Settings" maxWidth="Infinity"
+                    onAction="#goToSettings" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
         </VBox>
     </left>
 
     <!-- MAIN CONTENT -->
     <center>
-        <VBox spacing="16" VBox.vgrow="ALWAYS"
-              style="-fx-padding: 24; -fx-background-color: #f4f4f4;">
+        <ScrollPane fx:id="mainScrollPane" fitToWidth="true"
+                    style="-fx-background-color: transparent;
+                           -fx-background: #f4f4f4;
+                           -fx-border-color: transparent;">
+            <VBox spacing="16" VBox.vgrow="ALWAYS"
+                  style="-fx-padding: 24; -fx-background-color: #f4f4f4;">
 
-            <!-- Header -->
-            <HBox alignment="CENTER_LEFT">
-                <VBox HBox.hgrow="ALWAYS">
-                    <Label text="Announcements"
-                           style="-fx-font-size: 22px; -fx-font-weight: bold;
-                                  -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="Post and manage barangay announcements"
-                           style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
-                </VBox>
-                <Button text="＋  New Announcement" onAction="#handleNewAnnouncement"
-                        style="-fx-background-color: #2d2d2d;
-                               -fx-text-fill: #ffffff; -fx-font-size: 12px;
-                               -fx-background-radius: 8; -fx-padding: 10 18;
-                               -fx-cursor: hand;"/>
-            </HBox>
-
-            <!-- Summary Cards -->
-            <HBox spacing="16">
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff; -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
-                    <Label text="Total" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="totalLabel" text="0"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="All announcements"
-                           style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff; -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
-                    <Label text="Emergency" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="emergencyLabel" text="0"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="Active emergencies"
-                           style="-fx-font-size: 11px; -fx-text-fill: #e53935;"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff; -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
-                    <Label text="Urgent" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="urgentLabel" text="0"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="Need attention"
-                           style="-fx-font-size: 11px; -fx-text-fill: #f59e0b;"/>
-                </VBox>
-                <VBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff; -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
-                    <Label text="Normal / Low" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
-                        <VBox.margin><Insets bottom="6"/></VBox.margin>
-                    </Label>
-                    <Label fx:id="normalLabel" text="0"
-                           style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
-                        <VBox.margin><Insets bottom="4"/></VBox.margin>
-                    </Label>
-                    <Label text="General info"
-                           style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
-                </VBox>
-            </HBox>
-
-            <!-- Search, Filter, and Date Range -->
-            <HBox spacing="12" alignment="CENTER_LEFT">
-                <HBox HBox.hgrow="ALWAYS"
-                      style="-fx-background-color: #ffffff; -fx-background-radius: 10;
-                             -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 10 16;">
-                    <Label text="🔍 " style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;"/>
-                    <TextField fx:id="searchField"
-                               promptText="Search announcements..."
-                               HBox.hgrow="ALWAYS"
-                               style="-fx-background-color: transparent;
-                                      -fx-border-color: transparent;
-                                      -fx-font-size: 13px; -fx-text-fill: #333333;"
-                               onKeyReleased="#handleSearch"/>
+                <!-- Header -->
+                <HBox alignment="CENTER_LEFT">
+                    <VBox HBox.hgrow="ALWAYS">
+                        <Label text="Announcements"
+                               style="-fx-font-size: 22px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="Post and manage barangay announcements"
+                               style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                    <Button text="＋  New Announcement" onAction="#handleNewAnnouncement"
+                            style="-fx-background-color: #2d2d2d;
+                                   -fx-text-fill: #ffffff; -fx-font-size: 12px;
+                                   -fx-background-radius: 8; -fx-padding: 10 18;
+                                   -fx-cursor: hand;"/>
                 </HBox>
-                <ComboBox fx:id="filterPriority" promptText="Filter by priority"
-                          onAction="#handleFilter"
-                          style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
-                                 -fx-border-width: 1; -fx-border-radius: 10;
-                                 -fx-background-radius: 10; -fx-font-size: 12px; -fx-padding: 4;"/>
-                <ComboBox fx:id="filterCategory" promptText="Filter by category"
-                          onAction="#handleFilter"
-                          style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
-                                 -fx-border-width: 1; -fx-border-radius: 10;
-                                 -fx-background-radius: 10; -fx-font-size: 12px; -fx-padding: 4;"/>
-                <DatePicker fx:id="filterDateFrom" promptText="From date"
-                            onAction="#handleFilter"
-                            style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
-                                   -fx-border-width: 1; -fx-border-radius: 10;
-                                   -fx-background-radius: 10; -fx-font-size: 12px;"/>
-                <DatePicker fx:id="filterDateTo" promptText="To date"
-                            onAction="#handleFilter"
-                            style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
-                                   -fx-border-width: 1; -fx-border-radius: 10;
-                                   -fx-background-radius: 10; -fx-font-size: 12px;"/>
-                <Button text="Clear" onAction="#handleClearFilters"
-                        style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555;
-                               -fx-font-size: 12px; -fx-background-radius: 8;
-                               -fx-border-radius: 8; -fx-border-color: #e0e0e0;
-                               -fx-border-width: 1; -fx-padding: 8 14; -fx-cursor: hand;"/>
-            </HBox>
 
-            <!-- Cards -->
-            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
-                        style="-fx-background-color: transparent;
-                               -fx-background: transparent;
-                               -fx-border-color: transparent;">
+                <!-- Summary Cards -->
+                <HBox spacing="16">
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff; -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
+                        <Label text="Total" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label fx:id="totalLabel" text="0"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="All announcements"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff; -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
+                        <Label text="Emergency" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label fx:id="emergencyLabel" text="0"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="Active emergencies"
+                               style="-fx-font-size: 11px; -fx-text-fill: #e53935;"/>
+                    </VBox>
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff; -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
+                        <Label text="Urgent" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label fx:id="urgentLabel" text="0"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="Need attention"
+                               style="-fx-font-size: 11px; -fx-text-fill: #f59e0b;"/>
+                    </VBox>
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff; -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 20;">
+                        <Label text="Normal / Low" style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label fx:id="normalLabel" text="0"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="General info"
+                               style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Search, Filter, and Date Range -->
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <HBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff; -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee; -fx-border-width: 1; -fx-padding: 10 16;">
+                        <Label text="🔍 " style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa;"/>
+                        <TextField fx:id="searchField"
+                                   promptText="Search announcements..."
+                                   HBox.hgrow="ALWAYS"
+                                   style="-fx-background-color: transparent;
+                                          -fx-border-color: transparent;
+                                          -fx-font-size: 13px; -fx-text-fill: #333333;"
+                                   onKeyReleased="#handleSearch"/>
+                    </HBox>
+                    <ComboBox fx:id="filterPriority" promptText="Filter by priority"
+                              onAction="#handleFilter"
+                              style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
+                                     -fx-border-width: 1; -fx-border-radius: 10;
+                                     -fx-background-radius: 10; -fx-font-size: 12px; -fx-padding: 4;"/>
+                    <ComboBox fx:id="filterCategory" promptText="Filter by category"
+                              onAction="#handleFilter"
+                              style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
+                                     -fx-border-width: 1; -fx-border-radius: 10;
+                                     -fx-background-radius: 10; -fx-font-size: 12px; -fx-padding: 4;"/>
+                    <DatePicker fx:id="filterDateFrom" promptText="From date"
+                                onAction="#handleFilter"
+                                style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
+                                       -fx-border-width: 1; -fx-border-radius: 10;
+                                       -fx-background-radius: 10; -fx-font-size: 12px;"/>
+                    <DatePicker fx:id="filterDateTo" promptText="To date"
+                                onAction="#handleFilter"
+                                style="-fx-background-color: #ffffff; -fx-border-color: #eeeeee;
+                                       -fx-border-width: 1; -fx-border-radius: 10;
+                                       -fx-background-radius: 10; -fx-font-size: 12px;"/>
+                    <Button text="Clear" onAction="#handleClearFilters"
+                            style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555;
+                                   -fx-font-size: 12px; -fx-background-radius: 8;
+                                   -fx-border-radius: 8; -fx-border-color: #e0e0e0;
+                                   -fx-border-width: 1; -fx-padding: 8 14; -fx-cursor: hand;"/>
+                </HBox>
+
+                <!-- Cards -->
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                            style="-fx-background-color: transparent;
+                                   -fx-background: transparent;
+                                   -fx-border-color: transparent;">
                     <VBox fx:id="announcementsPane" spacing="16"
-                            style="-fx-padding: 4;"/>
-            </ScrollPane>
+                          style="-fx-padding: 4; -fx-background-color: transparent;"/>
+                </ScrollPane>
 
-        </VBox>
+            </VBox>
+        </ScrollPane>
     </center>
 
 </BorderPane>

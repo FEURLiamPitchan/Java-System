@@ -1,5 +1,6 @@
 package com.mycompany.javasystem;
 
+import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -7,24 +8,36 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.FileWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SettingsController {
 
     @FXML private Button logoutButton;
+    @FXML private Button alertsButton;
+    @FXML private Label alertBadge;
+    @FXML private HBox avatarBox;
+    @FXML private Circle avatarCircle;
+    @FXML private ImageView profileImageView;
+    @FXML private Label avatarInitialLabel;
     @FXML private Label topBarNameLabel;
     @FXML private Label topBarRoleLabel;
-    @FXML private HBox avatarBox;
     @FXML private StackPane tabContent;
     @FXML private ScrollPane mainScrollPane;
     @FXML private Button tabGeneralBtn;
@@ -37,11 +50,13 @@ public class SettingsController {
     private boolean notifPayments      = true;
     private boolean notifAnnouncements = true;
     private String  currentFontSize    = "Medium";
+    private boolean isDarkModeState    = false;
 
     // Toggle switch nodes for notifications
     private StackPane complaintsToggle;
     private StackPane paymentsToggle;
     private StackPane announcementsToggle;
+    private StackPane darkModeToggle;
 
     private final String activeTabStyle =
         "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
@@ -56,8 +71,24 @@ public class SettingsController {
     @FXML
     public void initialize() {
         loadTopBar();
+        loadAvatarPicture();
         loadSettingsFromDB();
+        
+        // Apply theme after loading settings
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) logoutButton.getScene().getWindow();
+                if (stage != null && stage.getScene() != null) {
+                    System.out.println("[SettingsController] Applying theme on init - isDarkMode: " + ThemeManager.isDarkMode);
+                    ThemeManager.applyTheme(stage);
+                }
+            } catch (Exception e) {
+                System.out.println("[SettingsController] Error applying theme: " + e.getMessage());
+            }
+        });
+        
         showGeneralTab();
+        refreshAlertBadge();
 
         Platform.runLater(() -> {
             if (mainScrollPane != null) {
@@ -86,6 +117,395 @@ public class SettingsController {
             topBarRoleLabel.setText(role != null ? capitalize(role) : "Admin");
     }
 
+    private void loadAvatarPicture() {
+        ProfilePictureManager.loadAvatarPicture(
+            SessionManager.getEmail(),
+            avatarBox,
+            avatarCircle,
+            profileImageView,
+            avatarInitialLabel
+        );
+    }
+
+    private String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
+    }
+
+    // ── Alerts ────────────────────────────────────────────────────────────────────
+    private void refreshAlertBadge() {
+        String email = SessionManager.getEmail();
+        if (email == null) return;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT COUNT(*) FROM notifications " +
+                "WHERE user_email = ? AND is_read = 'false'");
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            int count = rs.next() ? rs.getInt(1) : 0;
+            rs.close(); stmt.close(); conn.close();
+            if (count > 0) {
+                alertBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+                alertBadge.setVisible(true);
+            } else {
+                alertBadge.setVisible(false);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    @FXML
+    private void handleAlertsClick() {
+        Stage alertStage = new Stage();
+        alertStage.initModality(Modality.APPLICATION_MODAL);
+        alertStage.initOwner(logoutButton.getScene().getWindow());
+        alertStage.setTitle("Notifications");
+        alertStage.setResizable(false);
+
+        VBox root = new VBox(0);
+        root.setStyle(
+            "-fx-background-color: #ffffff; -fx-min-width: 480; -fx-max-width: 480;");
+
+        VBox header = new VBox(4);
+        header.setFocusTraversable(true);
+        header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 20 24;");
+        Label titleLbl = new Label("Notifications");
+        titleLbl.setStyle(
+            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        Label subLbl = new Label("Click a notification to view and take action");
+        subLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        header.getChildren().addAll(titleLbl, subLbl);
+
+        HBox filterRow = new HBox(8);
+        filterRow.setStyle(
+            "-fx-padding: 12 24; -fx-background-color: #f8f9fa;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 0 0 1 0;" +
+            "-fx-alignment: CENTER_LEFT;");
+
+        final boolean[] showingPast = {false};
+
+        Button unreadBtn = new Button("Unread");
+        unreadBtn.setStyle(
+            "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 11px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
+        Button pastBtn = new Button("Past Notifications");
+        pastBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+            "-fx-font-size: 11px; -fx-background-radius: 20;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+            "-fx-padding: 5 14; -fx-cursor: hand;");
+
+        Region filterSpacer = new Region();
+        HBox.setHgrow(filterSpacer, Priority.ALWAYS);
+        filterRow.getChildren().addAll(unreadBtn, pastBtn, filterSpacer);
+
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setFitToWidth(true);
+        scrollPane.setPrefHeight(380);
+        scrollPane.setStyle(
+            "-fx-background-color: transparent; -fx-background: transparent;" +
+            "-fx-border-color: transparent;");
+
+        VBox notifBody = new VBox(0);
+        notifBody.setStyle("-fx-background-color: #ffffff;");
+
+        Runnable[] loadNotifsRef = {null};
+
+        Runnable loadNotifs = () -> {
+            notifBody.getChildren().clear();
+            String email = SessionManager.getEmail();
+            if (email == null) return;
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                conn.setAutoCommit(true);
+                String sql = showingPast[0]
+                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
+                      "' ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_email = '" + email +
+                      "' AND is_read = 'false' ORDER BY notif_id DESC";
+                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                List<String[]> items = new ArrayList<>();
+                while (rs.next()) {
+                    items.add(new String[]{
+                        rs.getString("notif_id"),
+                        rs.getString("type"),
+                        rs.getString("message"),
+                        rs.getString("is_read"),
+                        rs.getString("created_at")
+                    });
+                }
+                rs.close(); conn.close();
+
+                if (items.isEmpty()) {
+                    VBox empty = new VBox(8);
+                    empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
+                    Label emptyLbl = new Label(
+                        showingPast[0]
+                            ? "No past notifications."
+                            : "You're all caught up! 🎉");
+                    emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
+                    empty.getChildren().add(emptyLbl);
+                    notifBody.getChildren().add(empty);
+                } else {
+                    for (String[] item : items)
+                        notifBody.getChildren().add(
+                            buildNotifItem(item, loadNotifsRef,
+                                showingPast, alertStage));
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        };
+
+        loadNotifsRef[0] = loadNotifs;
+        loadNotifs.run();
+        scrollPane.setContent(notifBody);
+
+        unreadBtn.setOnAction(e -> {
+            showingPast[0] = false;
+            unreadBtn.setStyle(
+                "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
+            pastBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-background-radius: 20;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+                "-fx-padding: 5 14; -fx-cursor: hand;");
+            loadNotifs.run();
+        });
+
+        pastBtn.setOnAction(e -> {
+            showingPast[0] = true;
+            pastBtn.setStyle(
+                "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
+            unreadBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-background-radius: 20;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+                "-fx-padding: 5 14; -fx-cursor: hand;");
+            loadNotifs.run();
+        });
+
+        HBox footer = new HBox();
+        footer.setStyle(
+            "-fx-padding: 14 24; -fx-alignment: CENTER_RIGHT;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
+        Button closeBtn = new Button("Close");
+        closeBtn.setStyle(
+            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
+        closeBtn.setOnAction(e -> {
+            refreshAlertBadge();
+            alertStage.close();
+        });
+        footer.getChildren().add(closeBtn);
+
+        root.getChildren().addAll(header, filterRow, scrollPane, footer);
+        alertStage.setScene(new Scene(root));
+        Platform.runLater(() -> root.requestFocus());
+        alertStage.showAndWait();
+        refreshAlertBadge();
+    }
+
+    private VBox buildNotifItem(String[] item,
+                                 Runnable[] loadNotifsRef,
+                                 boolean[] showingPast,
+                                 Stage alertStage) {
+        String notifId = item[0];
+        String type    = item[1];
+        String message = item[2];
+        String isRead  = item[3];
+        String dateStr = item[4];
+        if (dateStr != null && dateStr.length() > 16)
+            dateStr = dateStr.substring(0, 16);
+
+        String icon, bg;
+        if ("complaint".equals(type))    { icon = "📢"; bg = "#ffebee"; }
+        else if ("payment".equals(type)) { icon = "💳"; bg = "#fff8e1"; }
+        else                             { icon = "📣"; bg = "#e3f2fd"; }
+
+        HBox row = new HBox(14);
+        row.setStyle(
+            "-fx-padding: 16 24;" +
+            "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
+            ("false".equals(isRead)
+                ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
+                : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        StackPane iconBox = new StackPane();
+        iconBox.setStyle(
+            "-fx-background-color: " + bg + "; -fx-background-radius: 10;" +
+            "-fx-min-width: 40; -fx-min-height: 40;" +
+            "-fx-max-width: 40; -fx-max-height: 40;");
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size: 16px;");
+        iconBox.getChildren().add(iconLbl);
+
+        VBox textBox = new VBox(4);
+        HBox.setHgrow(textBox, Priority.ALWAYS);
+        Label msgLbl = new Label(message);
+        msgLbl.setStyle(
+            "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
+            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+        msgLbl.setWrapText(true);
+        Label dateLbl = new Label(dateStr != null ? dateStr : "");
+        dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
+        textBox.getChildren().addAll(msgLbl, dateLbl);
+
+        if ("false".equals(isRead)) {
+            Circle dot = new Circle(4);
+            dot.setStyle("-fx-fill: #1565c0;");
+            row.getChildren().addAll(iconBox, textBox, dot);
+        } else {
+            Label readBadge = new Label("Read");
+            readBadge.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #aaaaaa;" +
+                "-fx-font-size: 9px; -fx-background-radius: 20; -fx-padding: 2 8;");
+            row.getChildren().addAll(iconBox, textBox, readBadge);
+        }
+
+        final String finalDateStr = dateStr;
+        row.setOnMouseClicked(e ->
+            showNotifDetail(notifId, type, message, finalDateStr,
+                icon, bg, isRead, loadNotifsRef, alertStage));
+
+        return new VBox(row);
+    }
+
+    private void showNotifDetail(String notifId, String type, String message,
+                                  String dateStr, String icon, String bg,
+                                  String isRead,
+                                  Runnable[] loadNotifsRef, Stage alertStage) {
+        Stage detail = new Stage();
+        detail.initModality(Modality.APPLICATION_MODAL);
+        detail.initOwner(alertStage);
+        detail.setTitle("Notification");
+        detail.setResizable(false);
+
+        VBox root = new VBox(0);
+        root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 440;");
+
+        VBox header = new VBox(6);
+        header.setFocusTraversable(true);
+        header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 22 28;");
+        Label titleLbl = new Label(
+            "complaint".equals(type) ? "Complaint Alert" :
+            "payment".equals(type)   ? "Payment Alert"   : "Announcement");
+        titleLbl.setStyle(
+            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        Label dateLbl = new Label(dateStr != null ? dateStr : "");
+        dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        header.getChildren().addAll(titleLbl, dateLbl);
+
+        VBox body = new VBox(20);
+        body.setStyle("-fx-padding: 28;");
+
+        HBox iconRow = new HBox(16);
+        iconRow.setAlignment(Pos.CENTER_LEFT);
+        StackPane iconBox = new StackPane();
+        iconBox.setStyle(
+            "-fx-background-color: " + bg + "; -fx-background-radius: 12;" +
+            "-fx-min-width: 52; -fx-min-height: 52;" +
+            "-fx-max-width: 52; -fx-max-height: 52;");
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size: 22px;");
+        iconBox.getChildren().add(iconLbl);
+        Label msgLbl = new Label(message);
+        msgLbl.setStyle(
+            "-fx-font-size: 13px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;");
+        msgLbl.setWrapText(true);
+        HBox.setHgrow(msgLbl, Priority.ALWAYS);
+        iconRow.getChildren().addAll(iconBox, msgLbl);
+        body.getChildren().add(iconRow);
+
+        String goToLabel =
+            "complaint".equals(type)   ? "→  Go to Complaints" :
+            "payment".equals(type)     ? "→  Go to Payments"   :
+                                         "→  Go to Announcements";
+        String goToFxml =
+            "complaint".equals(type)   ? "Complaints.fxml" :
+            "payment".equals(type)     ? "Payments.fxml"   :
+                                         "Announcements.fxml";
+
+        Button goToBtn = new Button(goToLabel);
+        goToBtn.setMaxWidth(Double.MAX_VALUE);
+        goToBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #1a1a1a;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 8; -fx-border-color: #e0e0e0;" +
+            "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
+            "-fx-alignment: CENTER_LEFT;");
+        goToBtn.setOnAction(e -> {
+            if ("false".equals(isRead)) markOneAsRead(notifId);
+            detail.close();
+            alertStage.close();
+            Stage stage = (Stage) logoutButton.getScene().getWindow();
+            SceneTransition.slideTo(stage, goToFxml, true, getClass());
+        });
+        body.getChildren().add(goToBtn);
+
+        HBox footer = new HBox(10);
+        footer.setStyle(
+            "-fx-padding: 16 28 24 28; -fx-alignment: CENTER_RIGHT;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
+
+        Button cancelBtn = new Button("Close");
+        cancelBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+            "-fx-font-size: 12px; -fx-background-radius: 8;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+            "-fx-padding: 10 20; -fx-cursor: hand;");
+        cancelBtn.setOnAction(e -> detail.close());
+
+        Button markBtn = new Button("Mark as Read");
+        markBtn.setStyle(
+            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
+
+        if ("true".equals(isRead)) {
+            footer.getChildren().add(cancelBtn);
+        } else {
+            markBtn.setOnAction(e -> {
+                markOneAsRead(notifId);
+                detail.close();
+                if (loadNotifsRef[0] != null) loadNotifsRef[0].run();
+                refreshAlertBadge();
+            });
+            footer.getChildren().addAll(cancelBtn, markBtn);
+        }
+
+        root.getChildren().addAll(header, body, footer);
+        detail.setScene(new Scene(root));
+        Platform.runLater(() -> root.requestFocus());
+        detail.showAndWait();
+    }
+
+    private void markOneAsRead(String notifId) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+            PreparedStatement stmt = conn.prepareStatement(
+                "UPDATE notifications SET is_read = 'true' " +
+                "WHERE notif_id = " + notifId);
+            stmt.executeUpdate();
+            stmt.close();
+            conn.close();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    // ── Avatar click ──────────────────────────────────────────────────────────────
+    @FXML
+    private void handleAvatarClick() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
+    }
+
     // ── Load Settings ─────────────────────────────────────────────────────────────
     private void loadSettingsFromDB() {
         String email = SessionManager.getEmail();
@@ -101,6 +521,14 @@ public class SettingsController {
                 notifAnnouncements = "true".equals(rs.getString("notif_announcements"));
                 String fs = rs.getString("font_size");
                 if (fs != null) currentFontSize = fs;
+                String dm = rs.getString("dark_mode");
+                isDarkModeState    = "true".equalsIgnoreCase(dm);
+                
+                // SYNC with ThemeManager
+                ThemeManager.isDarkMode = isDarkModeState;
+                
+                System.out.println("[DEBUG] Loaded dark_mode from DB: " + dm + " -> " + isDarkModeState);
+                System.out.println("[DEBUG] ThemeManager.isDarkMode synced to: " + ThemeManager.isDarkMode);
             } else {
                 insertDefaultSettings(email);
             }
@@ -134,19 +562,43 @@ public class SettingsController {
 
     @FXML private void showGeneralTab() {
         setActiveTab(tabGeneralBtn);
-        tabContent.getChildren().setAll(buildGeneralTab());
+        Node content = buildGeneralTab();
+        tabContent.getChildren().setAll(content);
+        applyThemeToNewContent();
     }
+
     @FXML private void showNotifTab() {
         setActiveTab(tabNotifBtn);
-        tabContent.getChildren().setAll(buildNotifTab());
+        Node content = buildNotifTab();
+        tabContent.getChildren().setAll(content);
+        applyThemeToNewContent();
     }
+
     @FXML private void showAppearanceTab() {
         setActiveTab(tabAppearanceBtn);
-        tabContent.getChildren().setAll(buildAppearanceTab());
+        Node content = buildAppearanceTab();
+        tabContent.getChildren().setAll(content);
+        applyThemeToNewContent();
     }
+
     @FXML private void showDataTab() {
         setActiveTab(tabDataBtn);
-        tabContent.getChildren().setAll(buildDataTab());
+        Node content = buildDataTab();
+        tabContent.getChildren().setAll(content);
+        applyThemeToNewContent();
+    }
+
+    private void applyThemeToNewContent() {
+        Platform.runLater(() -> {
+            try {
+                Stage stage = (Stage) logoutButton.getScene().getWindow();
+                if (stage != null && stage.getScene() != null) {
+                    ThemeManager.applyTheme(stage);
+                }
+            } catch (Exception e) {
+                System.out.println("[SettingsController] Error applying theme to new content: " + e.getMessage());
+            }
+        });
     }
 
     // ── GENERAL TAB ───────────────────────────────────────────────────────────────
@@ -157,7 +609,6 @@ public class SettingsController {
             "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
             "-fx-border-color: #e8e8e8; -fx-border-width: 1;");
 
-        // Header
         VBox header = new VBox(4);
         header.setStyle(
             "-fx-background-color: #1a1a1a; -fx-background-radius: 16 16 0 0;" +
@@ -171,7 +622,6 @@ public class SettingsController {
         VBox body = new VBox(0);
         body.setStyle("-fx-padding: 0;");
 
-        // Population base row
         TextField popField = new TextField();
         popField.setStyle(
             "-fx-font-size: 13px; -fx-padding: 10 14; -fx-background-radius: 10;" +
@@ -182,7 +632,6 @@ public class SettingsController {
         Label popErrorLbl = new Label("");
         popErrorLbl.setStyle("-fx-font-size: 11px;");
 
-        // Load current value
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.prepareStatement(
@@ -255,7 +704,6 @@ public class SettingsController {
         sub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(title, sub);
 
-        // Build toggles
         complaintsToggle    = buildToggle(notifComplaints);
         paymentsToggle      = buildToggle(notifPayments);
         announcementsToggle = buildToggle(notifAnnouncements);
@@ -327,7 +775,7 @@ public class SettingsController {
         sub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(title, sub);
 
-        // Font size buttons
+        // ── FONT SIZE SECTION ──
         Button fontSmallBtn  = new Button("Small");
         Button fontMediumBtn = new Button("Medium");
         Button fontLargeBtn  = new Button("Large");
@@ -381,12 +829,69 @@ public class SettingsController {
         fontRow.getChildren().addAll(
             fontSmallBtn, fontMediumBtn, fontLargeBtn, saveFontBtn, fontErrorLbl);
 
-        // Dark mode — coming soon
-        Label soonBadge = new Label("Coming Soon");
-        soonBadge.setStyle(
-            "-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0;" +
-            "-fx-font-size: 10px; -fx-font-weight: bold;" +
-            "-fx-background-radius: 20; -fx-padding: 4 12;");
+        // ── DARK MODE TOGGLE ──
+        System.out.println("[DEBUG] isDarkModeState = " + isDarkModeState);
+        darkModeToggle = buildToggle(isDarkModeState);
+        
+        Label darkModeErrorLbl = new Label("");
+        darkModeErrorLbl.setStyle("-fx-font-size: 11px;");
+
+        HBox darkModeControlRow = new HBox(12);
+        darkModeControlRow.setStyle("-fx-alignment: CENTER_LEFT;");
+        darkModeControlRow.getChildren().addAll(darkModeToggle, darkModeErrorLbl);
+
+        // IMPORTANT: Set click handler AFTER adding to scene
+        darkModeToggle.setOnMouseClicked(e -> {
+            System.out.println("\n========== [SETTINGS] DARK MODE TOGGLE CLICKED ==========");
+            boolean currentState = (boolean) darkModeToggle.getUserData();
+            System.out.println("[SETTINGS] Current state: " + currentState);
+            
+            boolean newDarkMode = !currentState;
+            System.out.println("[SETTINGS] New state: " + newDarkMode);
+            
+            // Update toggle visually first
+            Rectangle track = (Rectangle) darkModeToggle.getChildren().get(0);
+            Circle thumb = (Circle) darkModeToggle.getChildren().get(1);
+            
+            TranslateTransition tt = new TranslateTransition(Duration.millis(200), thumb);
+            if (newDarkMode) {
+                track.setFill(Color.web("#2e7d32"));
+                tt.setToX(12);
+            } else {
+                track.setFill(Color.web("#cccccc"));
+                tt.setToX(-12);
+            }
+            tt.play();
+            
+            // Update state
+            darkModeToggle.setUserData(newDarkMode);
+            isDarkModeState = newDarkMode;
+            
+            // Save to database
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(
+                    "UPDATE settings SET dark_mode = ? WHERE user_email = ?");
+                stmt.setString(1, newDarkMode ? "true" : "false");
+                stmt.setString(2, SessionManager.getEmail());
+                int updated = stmt.executeUpdate();
+                System.out.println("[SETTINGS] DB updated: " + updated);
+                stmt.close();
+                conn.close();
+                setStatus(darkModeErrorLbl, "✅  Theme saved!", true);
+            } catch (Exception ex) {
+                System.out.println("[ERROR] " + ex.getMessage());
+                setStatus(darkModeErrorLbl, "⚠  Error saving theme.", false);
+            }
+            
+            // Apply theme to current scene using Java code
+            Stage stage = (Stage) logoutButton.getScene().getWindow();
+            ThemeManager.isDarkMode = newDarkMode;
+            System.out.println("[SETTINGS] ThemeManager.isDarkMode set to: " + ThemeManager.isDarkMode);
+            ThemeManager.applyTheme(stage);
+            System.out.println("[SETTINGS] Theme applied successfully");
+            System.out.println("========== [SETTINGS] DARK MODE TOGGLE FINISHED ==========\n");
+        });
 
         VBox body = new VBox(0);
         body.getChildren().addAll(
@@ -395,14 +900,14 @@ public class SettingsController {
                 fontRow, false),
             buildSettingRow("Dark Mode",
                 "Switch between light and dark interface theme",
-                soonBadge, true)
+                darkModeControlRow, true)
         );
 
         container.getChildren().addAll(header, body);
         return container;
     }
 
-    // ── DATA TAB ──────────────────────────────────────────────────────────────────
+    // ── DATA TAB ───────────────────────────────────────────────────────���──────────
     private Node buildDataTab() {
         VBox container = new VBox(0);
         container.setMaxWidth(Double.MAX_VALUE);
@@ -420,7 +925,6 @@ public class SettingsController {
         sub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(title, sub);
 
-        // Export residents
         Label resLbl = new Label("");
         resLbl.setStyle("-fx-font-size: 11px;");
         Button exportResBtn = new Button("Export CSV");
@@ -432,7 +936,6 @@ public class SettingsController {
         HBox resRow = new HBox(12, exportResBtn, resLbl);
         resRow.setStyle("-fx-alignment: CENTER_LEFT;");
 
-        // Export payments
         Label payLbl = new Label("");
         payLbl.setStyle("-fx-font-size: 11px;");
         Button exportPayBtn = new Button("Export CSV");
@@ -444,7 +947,6 @@ public class SettingsController {
         HBox payRow = new HBox(12, exportPayBtn, payLbl);
         payRow.setStyle("-fx-alignment: CENTER_LEFT;");
 
-        // Export finances
         Label finLbl = new Label("");
         finLbl.setStyle("-fx-font-size: 11px;");
         Button exportFinBtn = new Button("Export CSV");
@@ -456,7 +958,6 @@ public class SettingsController {
         HBox finRow = new HBox(12, exportFinBtn, finLbl);
         finRow.setStyle("-fx-alignment: CENTER_LEFT;");
 
-        // Clear logs
         Label logLbl = new Label("");
         logLbl.setStyle("-fx-font-size: 11px;");
         Button clearLogsBtn = new Button("Clear Logs");
@@ -507,7 +1008,7 @@ public class SettingsController {
         row.setStyle(
             "-fx-padding: 20 28;" +
             (isLast ? "" : "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;"));
-        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        row.setAlignment(Pos.CENTER_LEFT);
 
         VBox textBox = new VBox(4);
         HBox.setHgrow(textBox, Priority.ALWAYS);
@@ -529,7 +1030,7 @@ public class SettingsController {
         row.setStyle(
             "-fx-padding: 20 28;" +
             (isLast ? "" : "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;"));
-        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        row.setAlignment(Pos.CENTER_LEFT);
 
         VBox textBox = new VBox(4);
         HBox.setHgrow(textBox, Priority.ALWAYS);
@@ -562,207 +1063,32 @@ public class SettingsController {
 
     // ── TOGGLE SWITCH ─────────────────────────────────────────────────────────────
     private StackPane buildToggle(boolean initialState) {
-        // Track with background
-        Rectangle track = new Rectangle(46, 24);
-        track.setArcWidth(24);
-        track.setArcHeight(24);
+        Rectangle track = new Rectangle(50, 26);
+        track.setArcWidth(26);
+        track.setArcHeight(26);
 
-        // Thumb (circle)
-        Circle thumb = new Circle(10);
-        thumb.setStyle("-fx-fill: #ffffff;" +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 1);");
+        Circle thumb = new Circle(11);
+        thumb.setStyle("-fx-fill: #ffffff;");
 
         StackPane toggle = new StackPane(track, thumb);
-        toggle.setPrefSize(46, 24);
+        toggle.setPrefSize(50, 26);
         toggle.setStyle("-fx-cursor: hand;");
-
-        // Store state as userData
         toggle.setUserData(initialState);
-        updateToggleVisual(toggle, track, thumb, initialState);
 
-        toggle.setOnMouseClicked(e -> {
-            boolean current = (boolean) toggle.getUserData();
-            boolean newState = !current;
-            toggle.setUserData(newState);
-            updateToggleVisual(toggle, track, thumb, newState);
-        });
+        // Set initial visual state
+        if (initialState) {
+            track.setFill(Color.web("#2e7d32"));
+            thumb.setTranslateX(12);
+        } else {
+            track.setFill(Color.web("#cccccc"));
+            thumb.setTranslateX(-12);
+        }
 
         return toggle;
     }
 
-    private void updateToggleVisual(StackPane toggle, Rectangle track,
-                                     Circle thumb, boolean isOn) {
-        if (isOn) {
-            track.setStyle("-fx-fill: #2e7d32;");
-            StackPane.setAlignment(thumb, javafx.geometry.Pos.CENTER_RIGHT);
-            thumb.setTranslateX(-3);
-        } else {
-            track.setStyle("-fx-fill: #cccccc;");
-            StackPane.setAlignment(thumb, javafx.geometry.Pos.CENTER_LEFT);
-            thumb.setTranslateX(3);
-        }
-    }
-
     private boolean isToggleOn(StackPane toggle) {
         return toggle != null && (boolean) toggle.getUserData();
-    }
-
-    // ── AVATAR / PROFILE MODAL ────────────────────────────────────────────────────
-    @FXML
-    private void handleAvatarClick() {
-        Stage modal = new Stage();
-        modal.initModality(Modality.APPLICATION_MODAL);
-        modal.initOwner(logoutButton.getScene().getWindow());
-        modal.setTitle("My Profile");
-        modal.setResizable(false);
-
-        VBox root = new VBox(0);
-        root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 440;");
-
-        // Header
-        VBox header = new VBox(6);
-        header.setFocusTraversable(true);
-        header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 24 28 22 28;");
-        Label titleLbl = new Label("My Profile");
-        titleLbl.setStyle(
-            "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
-        Label subLbl = new Label("View and update your account information");
-        subLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
-        header.getChildren().addAll(titleLbl, subLbl);
-
-        VBox body = new VBox(16);
-        body.setStyle("-fx-padding: 24 28;");
-
-        // Avatar row
-        String name  = SessionManager.getName();
-        String email = SessionManager.getEmail();
-        String role  = SessionManager.getRole();
-
-        HBox avatarRow = new HBox(16);
-        avatarRow.setStyle("-fx-alignment: CENTER_LEFT;");
-        StackPane avatarCircle = new StackPane();
-        avatarCircle.setStyle(
-            "-fx-background-color: #2d2d2d; -fx-background-radius: 35;" +
-            "-fx-min-width: 70; -fx-min-height: 70;" +
-            "-fx-max-width: 70; -fx-max-height: 70;");
-        Label avatarLbl = new Label(
-            name != null && !name.isEmpty()
-                ? String.valueOf(name.charAt(0)).toUpperCase() : "A");
-        avatarLbl.setStyle(
-            "-fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
-        avatarCircle.getChildren().add(avatarLbl);
-
-        VBox infoBox = new VBox(4);
-        Label nameLbl = new Label(name != null ? name : "—");
-        nameLbl.setStyle(
-            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
-        Label emailLbl = new Label(email != null ? email : "—");
-        emailLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #777777;");
-        Label roleBadge = new Label(role != null ? capitalize(role) : "—");
-        roleBadge.setStyle(
-            "-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0;" +
-            "-fx-font-size: 10px; -fx-font-weight: bold;" +
-            "-fx-background-radius: 20; -fx-padding: 3 10;");
-        infoBox.getChildren().addAll(nameLbl, emailLbl, roleBadge);
-        avatarRow.getChildren().addAll(avatarCircle, infoBox);
-
-        Separator sep = new Separator();
-        sep.setStyle("-fx-opacity: 0.2;");
-
-        // Edit fields
-        String labelStyle =
-            "-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;";
-        String fieldStyle =
-            "-fx-font-size: 13px; -fx-padding: 10 14; -fx-background-radius: 8;" +
-            "-fx-border-color: #e8e8e8; -fx-border-width: 1; -fx-border-radius: 8;" +
-            "-fx-background-color: #f8f9fa;";
-
-        Label nameFldLbl = new Label("FULL NAME");
-        nameFldLbl.setStyle(labelStyle);
-        TextField nameField = new TextField(name != null ? name : "");
-        nameField.setStyle(fieldStyle);
-        nameField.setMaxWidth(Double.MAX_VALUE);
-        VBox nameGroup = new VBox(6, nameFldLbl, nameField);
-
-        Label emailFldLbl = new Label("EMAIL ADDRESS");
-        emailFldLbl.setStyle(labelStyle);
-        TextField emailField = new TextField(email != null ? email : "");
-        emailField.setStyle(fieldStyle);
-        emailField.setMaxWidth(Double.MAX_VALUE);
-        VBox emailGroup = new VBox(6, emailFldLbl, emailField);
-
-        Label errorLbl = new Label("");
-        errorLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #c62828;");
-
-        body.getChildren().addAll(avatarRow, sep, nameGroup, emailGroup, errorLbl);
-
-        // Footer
-        HBox footer = new HBox(10);
-        footer.setStyle(
-            "-fx-padding: 16 28 24 28; -fx-alignment: CENTER_RIGHT;" +
-            "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
-
-        Button cancelBtn = new Button("Cancel");
-        cancelBtn.setStyle(
-            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
-            "-fx-font-size: 12px; -fx-font-weight: bold;" +
-            "-fx-background-radius: 8; -fx-border-color: #e0e0e0;" +
-            "-fx-border-width: 1; -fx-padding: 10 20; -fx-cursor: hand;");
-        cancelBtn.setOnAction(e -> modal.close());
-
-        Button saveBtn = new Button("Save Changes");
-        saveBtn.setStyle(
-            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
-            "-fx-font-size: 12px; -fx-font-weight: bold;" +
-            "-fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;");
-        saveBtn.setOnAction(e -> {
-            String newName  = nameField.getText().trim();
-            String newEmail = emailField.getText().trim();
-            String oldEmail = SessionManager.getEmail();
-
-            if (newName.isEmpty() || newEmail.isEmpty()) {
-                errorLbl.setText("⚠  Please fill in all fields.");
-                return;
-            }
-            if (!newEmail.contains("@")) {
-                errorLbl.setText("⚠  Enter a valid email address.");
-                return;
-            }
-            try {
-                Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                    "UPDATE users SET full_name = ?, email = ? WHERE email = ?");
-                stmt.setString(1, newName);
-                stmt.setString(2, newEmail);
-                stmt.setString(3, oldEmail);
-                stmt.executeUpdate();
-                stmt.close();
-
-                if (!newEmail.equals(oldEmail)) {
-                    PreparedStatement stmt2 = conn.prepareStatement(
-                        "UPDATE settings SET user_email = ? WHERE user_email = ?");
-                    stmt2.setString(1, newEmail);
-                    stmt2.setString(2, oldEmail);
-                    stmt2.executeUpdate();
-                    stmt2.close();
-                }
-                conn.close();
-
-                SessionManager.login(newEmail, SessionManager.getRole(), newName);
-                loadTopBar();
-                modal.close();
-                showInfo("✅  Profile updated successfully!");
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                errorLbl.setText("⚠  Database error.");
-            }
-        });
-
-        footer.getChildren().addAll(cancelBtn, saveBtn);
-        root.getChildren().addAll(header, body, footer);
-        modal.setScene(new Scene(root));
-        Platform.runLater(() -> root.requestFocus());
-        modal.showAndWait();
     }
 
     // ── EXPORT HELPERS ────────────────────────────────────────────────────────────
@@ -848,19 +1174,6 @@ public class SettingsController {
         lbl.setStyle(isSuccess
             ? "-fx-text-fill: #2e7d32; -fx-font-size: 11px;"
             : "-fx-text-fill: #c62828; -fx-font-size: 11px;");
-    }
-
-    private String capitalize(String s) {
-        if (s == null || s.isEmpty()) return s;
-        return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
-    }
-
-    private void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Info");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
     // ── NAVIGATION ────────────────────────────────────────────────────────────────
