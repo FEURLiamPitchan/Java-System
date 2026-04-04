@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mycompany.javasystem.SettingsController"
+            prefHeight="700.0" prefWidth="1100.0"
+            style="-fx-background-color: #f4f4f4;">
+
+    <!-- TOP BAR -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="65"       
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 0 1 0;
+                     -fx-padding: 0 24;">
+
+            <HBox alignment="CENTER_LEFT" spacing="12" HBox.hgrow="ALWAYS">
+                <Circle radius="18" fill="#2d2d2d"/>
+                <VBox alignment="CENTER_LEFT" spacing="2">
+                    <Label text="Barangay San Isidro"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Resident Portal"
+                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                </VBox>
+            </HBox>
+
+            <HBox alignment="CENTER_RIGHT" spacing="12">
+                <Button text="🔔  Alerts" onAction="#goBackToDashboard"
+                        style="-fx-background-color: #f4f4f4;
+                               -fx-text-fill: #333333;
+                               -fx-font-size: 12px;
+                               -fx-background-radius: 20;
+                               -fx-border-radius: 20;
+                               -fx-border-color: #e0e0e0;
+                               -fx-border-width: 1;
+                               -fx-padding: 8 16;
+                               -fx-cursor: hand;"/>
+
+                <HBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #f4f4f4;
+                             -fx-background-radius: 20;
+                             -fx-border-radius: 20;
+                             -fx-border-color: #e0e0e0;
+                             -fx-border-width: 1;
+                             -fx-padding: 6 16;">
+                    <Circle radius="14" fill="#2d2d2d"/>
+                    <VBox alignment="CENTER_LEFT" spacing="1">
+                        <Label fx:id="residentNameLabel" text="Resident Name"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="Resident"
+                               style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                </HBox>
+
+                <Button fx:id="logoutButton" text="← Logout" onAction="#handleLogout"
+                    style="-fx-background-color: #ffffff;
+                        -fx-text-fill: #555555;
+                        -fx-font-size: 12px;
+                        -fx-background-radius: 8;
+                        -fx-border-radius: 8;
+                        -fx-border-color: #e0e0e0;
+                        -fx-border-width: 1;
+                        -fx-padding: 8 16;
+                        -fx-cursor: hand;"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- SIDEBAR -->
+    <left>
+        <VBox prefWidth="220" prefHeight="700"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 1 0 0;
+                     -fx-padding: 20 12;">
+
+            <Label text="MAIN"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="🏠   Dashboard" maxWidth="Infinity"
+                    onAction="#goBackToDashboard"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📄   My Documents" maxWidth="Infinity"
+                    onAction="#goToMyDocuments"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📝   Request Document" maxWidth="Infinity"
+                    onAction="#goToRequestDocument"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="SERVICES"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="💳   Payments" maxWidth="Infinity"
+                    onAction="#goToPayments"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📢   My Complaints" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📣   Announcements" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="ACCOUNT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="👤   My Profile" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="⚙️   Settings" maxWidth="Infinity"
+                    style="-fx-background-color: #2d2d2d;
+                           -fx-text-fill: #ffffff;
+                           -fx-font-size: 13px;
+                           -fx-font-weight: bold;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+        </VBox>
+    </left>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background-color: #f4f4f4;
+                           -fx-background: #f4f4f4;
+                           -fx-border-color: transparent;">
+            <VBox spacing="20" style="-fx-padding: 24;">
+
+                <!-- Page Header -->
+                <VBox spacing="8">
+                    <Label text="Settings"
+                           style="-fx-font-size: 24px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Manage your account preferences and application settings"
+                           style="-fx-font-size: 13px; -fx-text-fill: #888888;"/>
+                </VBox>
+
+                <!-- Settings Grid -->
+                <GridPane hgap="20" vgap="20">
+                    
+                    <!-- Account Settings -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 24;"
+                          spacing="20"
+                          prefWidth="520"
+                          GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <Circle radius="24" fill="#e3f2fd"/>
+                            <VBox spacing="4">
+                                <Label text="Account Settings"
+                                       style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                              -fx-text-fill: #1a1a1a;"/>
+                                <Label text="Update your personal information"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Separator/>
+
+                        <!-- Full Name -->
+                        <VBox spacing="8">
+                            <Label text="Full Name"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <TextField fx:id="fullNameField" text="Juan Dela Cruz"
+                                       style="-fx-font-size: 13px;
+                                              -fx-background-color: #ffffff;
+                                              -fx-border-color: #e0e0e0;
+                                              -fx-border-radius: 6;
+                                              -fx-background-radius: 6;
+                                              -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <!-- Email -->
+                        <VBox spacing="8">
+                            <Label text="Email Address"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <TextField fx:id="emailField" text="juan.delacruz@email.com"
+                                       style="-fx-font-size: 13px;
+                                              -fx-background-color: #ffffff;
+                                              -fx-border-color: #e0e0e0;
+                                              -fx-border-radius: 6;
+                                              -fx-background-radius: 6;
+                                              -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <!-- Phone -->
+                        <VBox spacing="8">
+                            <Label text="Phone Number"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <TextField fx:id="phoneField" text="+63 912 345 6789"
+                                       style="-fx-font-size: 13px;
+                                              -fx-background-color: #ffffff;
+                                              -fx-border-color: #e0e0e0;
+                                              -fx-border-radius: 6;
+                                              -fx-background-radius: 6;
+                                              -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <!-- Address -->
+                        <VBox spacing="8">
+                            <Label text="Address"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <TextField fx:id="addressField" text="123 Main Street, Barangay San Isidro"
+                                       style="-fx-font-size: 13px;
+                                              -fx-background-color: #ffffff;
+                                              -fx-border-color: #e0e0e0;
+                                              -fx-border-radius: 6;
+                                              -fx-background-radius: 6;
+                                              -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <Button text="Update Account Info" onAction="#updateAccountInfo"
+                                style="-fx-background-color: #2196f3;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 12 20;
+                                       -fx-cursor: hand;"/>
+                    </VBox>
+
+                    <!-- Security Settings -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 24;"
+                          spacing="20"
+                          prefWidth="520"
+                          GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <Circle radius="24" fill="#e8f5e9"/>
+                            <VBox spacing="4">
+                                <Label text="Security Settings"
+                                       style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                              -fx-text-fill: #1a1a1a;"/>
+                                <Label text="Manage your password and security"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Separator/>
+
+                        <!-- Current Password -->
+                        <VBox spacing="8">
+                            <Label text="Current Password"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <PasswordField fx:id="currentPasswordField"
+                                           style="-fx-font-size: 13px;
+                                                  -fx-background-color: #ffffff;
+                                                  -fx-border-color: #e0e0e0;
+                                                  -fx-border-radius: 6;
+                                                  -fx-background-radius: 6;
+                                                  -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <!-- New Password -->
+                        <VBox spacing="8">
+                            <Label text="New Password"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <PasswordField fx:id="newPasswordField"
+                                           style="-fx-font-size: 13px;
+                                                  -fx-background-color: #ffffff;
+                                                  -fx-border-color: #e0e0e0;
+                                                  -fx-border-radius: 6;
+                                                  -fx-background-radius: 6;
+                                                  -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <!-- Confirm Password -->
+                        <VBox spacing="8">
+                            <Label text="Confirm New Password"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <PasswordField fx:id="confirmPasswordField"
+                                           style="-fx-font-size: 13px;
+                                                  -fx-background-color: #ffffff;
+                                                  -fx-border-color: #e0e0e0;
+                                                  -fx-border-radius: 6;
+                                                  -fx-background-radius: 6;
+                                                  -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <Button text="Change Password" onAction="#changePassword"
+                                style="-fx-background-color: #4caf50;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 12 20;
+                                       -fx-cursor: hand;"/>
+                    </VBox>
+
+                    <!-- Alert Preferences -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 24;"
+                          spacing="20"
+                          prefWidth="520"
+                          GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <Circle radius="24" fill="#fff3e0"/>
+                            <VBox spacing="4">
+                                <Label text="Alert Preferences"
+                                       style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                              -fx-text-fill: #1a1a1a;"/>
+                                <Label text="Choose how you want to be alerted"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Separator/>
+
+                        <!-- Email Alerts -->
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <CheckBox fx:id="emailNotificationsCheck" selected="true"
+                                      style="-fx-font-size: 13px;"/>
+                            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                <Label text="Email Alerts"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                              -fx-text-fill: #333333;"/>
+                                <Label text="Receive updates about document status via email"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- SMS Alerts -->
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <CheckBox fx:id="smsNotificationsCheck" selected="true"
+                                      style="-fx-font-size: 13px;"/>
+                            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                <Label text="SMS Alerts"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                              -fx-text-fill: #333333;"/>
+                                <Label text="Get text messages for important updates"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Push Alerts -->
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <CheckBox fx:id="pushNotificationsCheck" selected="false"
+                                      style="-fx-font-size: 13px;"/>
+                            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                <Label text="Push Alerts"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                              -fx-text-fill: #333333;"/>
+                                <Label text="Browser alerts for real-time updates"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Announcement Alerts -->
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <CheckBox fx:id="announcementNotificationsCheck" selected="true"
+                                      style="-fx-font-size: 13px;"/>
+                            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                <Label text="Barangay Announcements"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                              -fx-text-fill: #333333;"/>
+                                <Label text="Stay informed about community news and events"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Button text="Save Alert Settings" onAction="#saveNotificationSettings"
+                                style="-fx-background-color: #ff9800;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 12 20;
+                                       -fx-cursor: hand;"/>
+                    </VBox>
+
+                    <!-- Privacy & Data Settings -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 24;"
+                          spacing="20"
+                          prefWidth="520"
+                          GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <Circle radius="24" fill="#f3e5f5"/>
+                            <VBox spacing="4">
+                                <Label text="Privacy & Data"
+                                       style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                              -fx-text-fill: #1a1a1a;"/>
+                                <Label text="Control your data and privacy settings"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <Separator/>
+
+                        <!-- Data Sharing -->
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <CheckBox fx:id="dataSharingCheck" selected="false"
+                                      style="-fx-font-size: 13px;"/>
+                            <VBox spacing="2" HBox.hgrow="ALWAYS">
+                                <Label text="Allow Data Sharing"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                              -fx-text-fill: #333333;"/>
+                                <Label text="Share anonymized data for service improvement"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Profile Visibility -->
+                        <VBox spacing="8">
+                            <Label text="Profile Visibility"
+                                   style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                          -fx-text-fill: #333333;"/>
+                            <ComboBox fx:id="profileVisibilityCombo" value="Private"
+                                      maxWidth="Infinity"
+                                      style="-fx-font-size: 13px;
+                                             -fx-background-color: #ffffff;
+                                             -fx-border-color: #e0e0e0;
+                                             -fx-border-radius: 6;
+                                             -fx-background-radius: 6;
+                                             -fx-padding: 10 12;"/>
+                        </VBox>
+
+                        <!-- Account Actions -->
+                        <VBox spacing="12">
+                            <Button text="Download My Data" onAction="#downloadData"
+                                    maxWidth="Infinity"
+                                    style="-fx-background-color: #2196f3;
+                                           -fx-text-fill: #ffffff;
+                                           -fx-font-size: 12px;
+                                           -fx-font-weight: bold;
+                                           -fx-background-radius: 8;
+                                           -fx-padding: 12 20;
+                                           -fx-cursor: hand;"/>
+                            
+                            <Button text="Delete Account" onAction="#deleteAccount"
+                                    maxWidth="Infinity"
+                                    style="-fx-background-color: #f44336;
+                                           -fx-text-fill: #ffffff;
+                                           -fx-font-size: 12px;
+                                           -fx-font-weight: bold;
+                                           -fx-background-radius: 8;
+                                           -fx-padding: 12 20;
+                                           -fx-cursor: hand;"/>
+                        </VBox>
+
+                        <Button text="Save Privacy Settings" onAction="#savePrivacySettings"
+                                style="-fx-background-color: #9c27b0;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 12 20;
+                                       -fx-cursor: hand;"/>
+                    </VBox>
+
+                </GridPane>
+
+                <!-- App Info -->
+                <VBox spacing="8"
+                      style="-fx-background-color: #e3f2fd;
+                             -fx-background-radius: 8;
+                             -fx-padding: 16;">
+                    <Label text="ℹ️ Application Information"
+                           style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1976d2;"/>
+                    <Label text="Barangay Management System v1.0 • Last updated: June 2024"
+                           style="-fx-font-size: 11px; -fx-text-fill: #555555;"/>
+                    <Label text="For technical support, contact the barangay office or email support@barangay.gov.ph"
+                           wrapText="true"
+                           style="-fx-font-size: 11px; -fx-text-fill: #555555;"/>
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

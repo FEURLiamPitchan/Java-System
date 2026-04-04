@@ -5,243 +5,165 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.*?>
 
-<HBox xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.mycompany.javasystem.LoginController"
-      prefHeight="768.0" prefWidth="1366.0"
-      spacing="0"
-      style="-fx-background-color: linear-gradient(to bottom right, #1a1a1a, #2d2d2d, #1a1a1a);">
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.mycompany.javasystem.LoginController"
+           prefHeight="600.0" prefWidth="900.0"
+           style="-fx-background-color: linear-gradient(to bottom right, #1a1a1a, #2d2d2d, #1a1a1a);
+                  -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.9), 60, 0, 0, 20);">
 
-    <!-- LEFT PANEL -->
-    <VBox alignment="CENTER" prefWidth="580" minHeight="768"
-          style="-fx-background-color: rgba(15,15,15,0.6);
-                 -fx-padding: 80;">
+    <HBox alignment="CENTER" spacing="0">
+        <HBox.margin><Insets top="70" bottom="70" left="90" right="90"/></HBox.margin>
 
-        <Rectangle width="48" height="3" arcWidth="3" arcHeight="3" fill="#555555">
-            <VBox.margin><Insets bottom="48"/></VBox.margin>
-        </Rectangle>
+        <!-- LEFT PANEL -->
+        <VBox alignment="CENTER" prefWidth="380" prefHeight="460"
+              style="-fx-background-color: rgba(33,33,33,0.75);
+                     -fx-background-radius: 20 0 0 20;
+                     -fx-padding: 50;">
 
-        <StackPane prefWidth="72" prefHeight="72"
-                   style="-fx-background-color: rgba(40,40,40,0.8);
-                          -fx-background-radius: 18;
-                          -fx-border-color: #3a3a3a;
-                          -fx-border-width: 1;
-                          -fx-border-radius: 18;">
-            <VBox.margin><Insets bottom="36"/></VBox.margin>
-            <Label text="BSI"
+            <HBox spacing="8" alignment="CENTER">
+                <Circle radius="4" fill="#444444"/>
+                <Circle radius="4" fill="#555555"/>
+                <Circle radius="4" fill="#666666"/>
+            </HBox>
+            <VBox.margin><Insets top="0" bottom="32"/></VBox.margin>
+
+            <Label text="Barangay San Isidro"
+                   style="-fx-font-size: 26px; -fx-font-weight: bold;
+                          -fx-text-fill: #ffffff; -fx-text-alignment: center;"
+                   textAlignment="CENTER">
+                <VBox.margin><Insets bottom="10"/></VBox.margin>
+            </Label>
+
+            <Label text="Management System"
+                   style="-fx-font-size: 13px; -fx-text-fill: #555555;
+                          -fx-text-alignment: center;"
+                   textAlignment="CENTER">
+                <VBox.margin><Insets bottom="24"/></VBox.margin>
+            </Label>
+
+            <HBox alignment="CENTER">
+                <VBox.margin><Insets top="10" bottom="24"/></VBox.margin>
+                <Rectangle width="50" height="2" arcWidth="2" arcHeight="2" fill="#444444"/>
+            </HBox>
+
+            <HBox spacing="8" alignment="CENTER">
+                <Label text="Efficient"
+                       style="-fx-background-color: rgba(42,42,42,0.8);
+                              -fx-background-radius: 20;
+                              -fx-border-color: #383838;
+                              -fx-border-width: 1;
+                              -fx-border-radius: 20;
+                              -fx-padding: 6 14;
+                              -fx-font-size: 11px;
+                              -fx-text-fill: #777777;"/>
+                <Label text="Reliable"
+                       style="-fx-background-color: rgba(42,42,42,0.8);
+                              -fx-background-radius: 20;
+                              -fx-border-color: #383838;
+                              -fx-border-width: 1;
+                              -fx-border-radius: 20;
+                              -fx-padding: 6 14;
+                              -fx-font-size: 11px;
+                              -fx-text-fill: #777777;"/>
+                <Label text="Modern"
+                       style="-fx-background-color: rgba(42,42,42,0.8);
+                              -fx-background-radius: 20;
+                              -fx-border-color: #383838;
+                              -fx-border-width: 1;
+                              -fx-border-radius: 20;
+                              -fx-padding: 6 14;
+                              -fx-font-size: 11px;
+                              -fx-text-fill: #777777;"/>
+            </HBox>
+            <VBox.margin><Insets top="0" bottom="28"/></VBox.margin>
+
+           <Label text="Serving the community with&#10;transparency and efficiency."
+                style="-fx-font-size: 11px; -fx-text-fill: #404040;
+                -fx-text-alignment: center;"
+                textAlignment="CENTER">
+            <VBox.margin><Insets top="16"/></VBox.margin>
+           </Label>
+
+        </VBox>
+
+        <!-- RIGHT PANEL -->
+        <VBox alignment="CENTER" prefWidth="400" prefHeight="460"
+              style="-fx-background-color: rgba(38,38,38,0.75);
+                     -fx-background-radius: 0 20 20 0;
+                     -fx-padding: 50;">
+
+            <Rectangle width="40" height="4" arcWidth="4" arcHeight="4" fill="#555555">
+                <VBox.margin><Insets bottom="24"/></VBox.margin>
+            </Rectangle>
+
+            <Label text="WELCOME BACK"
                    style="-fx-font-size: 20px; -fx-font-weight: bold;
-                          -fx-text-fill: #aaaaaa;"/>
-        </StackPane>
+                          -fx-text-fill: #ffffff;">
+                <VBox.margin><Insets bottom="6"/></VBox.margin>
+            </Label>
 
-        <Label text="Barangay"
-               style="-fx-font-size: 42px; -fx-font-weight: bold;
-                      -fx-text-fill: #ffffff;">
-            <VBox.margin><Insets bottom="0"/></VBox.margin>
-        </Label>
+            <Label text="Sign in to your account"
+                   style="-fx-font-size: 12px; -fx-text-fill: #555555;">
+                <VBox.margin><Insets bottom="32"/></VBox.margin>
+            </Label>
 
-        <Label text="San Isidro"
-               style="-fx-font-size: 42px; -fx-font-weight: bold;
-                      -fx-text-fill: #ffffff;">
-            <VBox.margin><Insets bottom="8"/></VBox.margin>
-        </Label>
-
-        <Label text="MANAGEMENT SYSTEM"
-               style="-fx-font-size: 11px; -fx-text-fill: #777777;
-                      -fx-font-weight: bold;">
-            <VBox.margin><Insets bottom="48"/></VBox.margin>
-        </Label>
-
-        <Rectangle width="320" height="1" fill="#2e2e2e">
-            <VBox.margin><Insets bottom="48"/></VBox.margin>
-        </Rectangle>
-
-        <HBox spacing="16" alignment="CENTER_LEFT">
-            <VBox.margin><Insets bottom="20"/></VBox.margin>
-            <StackPane prefWidth="36" prefHeight="36"
-                       style="-fx-background-color: rgba(40,40,40,0.8);
-                              -fx-background-radius: 8;
-                              -fx-border-color: #3a3a3a;
-                              -fx-border-width: 1;
-                              -fx-border-radius: 8;">
-                <Label text="✦" style="-fx-text-fill: #888888; -fx-font-size: 12px;"/>
-            </StackPane>
-            <VBox spacing="3">
-                <Label text="Resident Records"
-                       style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #cccccc;"/>
-                <Label text="Manage and track all barangay residents"
-                       style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
-            </VBox>
-        </HBox>
-
-        <HBox spacing="16" alignment="CENTER_LEFT">
-            <VBox.margin><Insets bottom="20"/></VBox.margin>
-            <StackPane prefWidth="36" prefHeight="36"
-                       style="-fx-background-color: rgba(40,40,40,0.8);
-                              -fx-background-radius: 8;
-                              -fx-border-color: #3a3a3a;
-                              -fx-border-width: 1;
-                              -fx-border-radius: 8;">
-                <Label text="◈" style="-fx-text-fill: #888888; -fx-font-size: 12px;"/>
-            </StackPane>
-            <VBox spacing="3">
-                <Label text="Document Services"
-                       style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #cccccc;"/>
-                <Label text="Issue clearances and certificates"
-                       style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
-            </VBox>
-        </HBox>
-
-        <HBox spacing="16" alignment="CENTER_LEFT">
-            <StackPane prefWidth="36" prefHeight="36"
-                       style="-fx-background-color: rgba(40,40,40,0.8);
-                              -fx-background-radius: 8;
-                              -fx-border-color: #3a3a3a;
-                              -fx-border-width: 1;
-                              -fx-border-radius: 8;">
-                <Label text="⬡" style="-fx-text-fill: #888888; -fx-font-size: 12px;"/>
-            </StackPane>
-            <VBox spacing="3">
-                <Label text="Announcements"
-                       style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #cccccc;"/>
-                <Label text="Broadcast community updates"
-                       style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
-            </VBox>
-        </HBox>
-
-        <Region VBox.vgrow="ALWAYS"/>
-        <Label text="Serving the community with transparency and efficiency."
-               style="-fx-font-size: 11px; -fx-text-fill: #444444;"/>
-
-    </VBox>
-
-    <!-- DIVIDER -->
-    <Rectangle width="1" height="768" fill="#2a2a2a"/>
-
-    <!-- RIGHT PANEL -->
-    <VBox fx:id="rightPanel" alignment="CENTER" HBox.hgrow="ALWAYS" minHeight="768"
-          style="-fx-background-color: rgba(10,10,10,0.5);
-                 -fx-padding: 80 180;">
-
-        <HBox alignment="CENTER_RIGHT">
-            <VBox.margin><Insets bottom="60"/></VBox.margin>
-            <Label text="v1.0"
-                   style="-fx-font-size: 10px; -fx-text-fill: #3a3a3a;"/>
-        </HBox>
-
-        <Region VBox.vgrow="ALWAYS"/>
-
-        <Label text="SIGN IN"
-               style="-fx-font-size: 11px; -fx-font-weight: bold;
-                      -fx-text-fill: #666666;">
-            <VBox.margin><Insets bottom="16"/></VBox.margin>
-        </Label>
-
-        <Label text="Welcome back"
-               style="-fx-font-size: 28px; -fx-font-weight: bold;
-                      -fx-text-fill: #ffffff;">
-            <VBox.margin><Insets bottom="6"/></VBox.margin>
-        </Label>
-
-        <Label text="Enter your credentials to access the system"
-               style="-fx-font-size: 12px; -fx-text-fill: #777777;">
-            <VBox.margin><Insets bottom="40"/></VBox.margin>
-        </Label>
-
-        <!-- Email -->
-        <Label text="EMAIL ADDRESS"
-               style="-fx-font-size: 10px; -fx-font-weight: bold;
-                      -fx-text-fill: #888888;">
-            <VBox.margin><Insets bottom="8"/></VBox.margin>
-        </Label>
-        <TextField fx:id="emailField" promptText="you@email.com"
-                   maxWidth="Infinity"
-                   style="-fx-background-color: rgba(30,30,30,0.9);
-                          -fx-background-radius: 8;
-                          -fx-border-radius: 8;
-                          -fx-border-color: #333333;
-                          -fx-border-width: 1;
-                          -fx-padding: 12 16;
-                          -fx-font-size: 13px;
-                          -fx-text-fill: #ffffff;
-                          -fx-prompt-text-fill: #444444;">
-            <VBox.margin><Insets bottom="20"/></VBox.margin>
-        </TextField>
-
-        <!-- Password -->
-        <Label text="PASSWORD"
-               style="-fx-font-size: 10px; -fx-font-weight: bold;
-                      -fx-text-fill: #888888;">
-            <VBox.margin><Insets bottom="8"/></VBox.margin>
-        </Label>
-        <StackPane maxWidth="Infinity">
-            <VBox.margin><Insets bottom="8"/></VBox.margin>
-            <PasswordField fx:id="passwordField" promptText="••••••••"
-                           maxWidth="Infinity"
-                           style="-fx-background-color: rgba(30,30,30,0.9);
-                                  -fx-background-radius: 8;
-                                  -fx-border-radius: 8;
-                                  -fx-border-color: #333333;
-                                  -fx-border-width: 1;
-                                  -fx-padding: 12 44 12 16;
-                                  -fx-font-size: 13px;
-                                  -fx-text-fill: #ffffff;
-                                  -fx-prompt-text-fill: #444444;"/>
-            <TextField fx:id="passwordVisible" promptText="••••••••"
+            <TextField fx:id="emailField" promptText="Email Address"
                        maxWidth="Infinity"
-                       style="-fx-background-color: rgba(30,30,30,0.9);
-                              -fx-background-radius: 8;
-                              -fx-border-radius: 8;
-                              -fx-border-color: #333333;
+                       style="-fx-background-color: rgba(46,46,46,0.9);
+                              -fx-background-radius: 10;
+                              -fx-border-radius: 10;
+                              -fx-border-color: #383838;
                               -fx-border-width: 1;
-                              -fx-padding: 12 44 12 16;
+                              -fx-padding: 13 18;
                               -fx-font-size: 13px;
                               -fx-text-fill: #ffffff;
-                              -fx-prompt-text-fill: #444444;"/>
-            <Button fx:id="togglePasswordBtn" text="👁" onAction="#togglePassword"
-                    StackPane.alignment="CENTER_RIGHT"
-                    style="-fx-background-color: transparent;
-                           -fx-border-color: transparent;
-                           -fx-text-fill: #555555;
+                              -fx-prompt-text-fill: #4a4a4a;">
+                <VBox.margin><Insets bottom="12"/></VBox.margin>
+            </TextField>
+
+            <PasswordField fx:id="passwordField" promptText="Password"
+                           maxWidth="Infinity"
+                           style="-fx-background-color: rgba(46,46,46,0.9);
+                                  -fx-background-radius: 10;
+                                  -fx-border-radius: 10;
+                                  -fx-border-color: #383838;
+                                  -fx-border-width: 1;
+                                  -fx-padding: 13 18;
+                                  -fx-font-size: 13px;
+                                  -fx-text-fill: #ffffff;
+                                  -fx-prompt-text-fill: #4a4a4a;">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+            </PasswordField>
+
+            <Label fx:id="errorLabel" text=""
+                   style="-fx-text-fill: #e53935; -fx-font-size: 11px;">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+            </Label>
+
+            <Button text="Sign In" onAction="#handleLogin"
+                    maxWidth="Infinity"
+                    style="-fx-background-color: rgba(56,56,56,0.9);
+                           -fx-text-fill: #ffffff;
                            -fx-font-size: 13px;
-                           -fx-cursor: hand;
-                           -fx-padding: 0 12 0 0;"/>
-        </StackPane>
+                           -fx-font-weight: bold;
+                           -fx-background-radius: 10;
+                           -fx-border-radius: 10;
+                           -fx-border-color: #484848;
+                           -fx-border-width: 1;
+                           -fx-padding: 13 0;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets top="8" bottom="20"/></VBox.margin>
+            </Button>
 
-        <Label fx:id="errorLabel" text=""
-               style="-fx-text-fill: #ef5350; -fx-font-size: 11px;">
-            <VBox.margin><Insets bottom="20"/></VBox.margin>
-        </Label>
+            <HBox alignment="CENTER" spacing="6">
+                <Label text="Don't have an account?"
+                       style="-fx-font-size: 12px; -fx-text-fill: #4a4a4a;"/>
+                <Hyperlink text="Register here" onAction="#goToRegister"
+                           style="-fx-text-fill: #888888; -fx-font-size: 12px;
+                                  -fx-border-color: transparent;"/>
+            </HBox>
 
-        <Button text="Sign In" onAction="#handleLogin"
-                maxWidth="Infinity"
-                style="-fx-background-color: #ffffff;
-                       -fx-text-fill: #111111;
-                       -fx-font-size: 13px;
-                       -fx-font-weight: 700;
-                       -fx-font-smoothing-type: gray;
-                       -fx-background-radius: 8;
-                       -fx-border-radius: 8;
-                       -fx-padding: 12 0;
-                       -fx-cursor: hand;
-                       -fx-background-insets: 0;
-                       -fx-effect: null;">
-            <VBox.margin><Insets bottom="28"/></VBox.margin>
-        </Button>
-        
-        <HBox alignment="CENTER" spacing="6">
-            <Label text="Don't have an account?"
-                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
-            <Hyperlink text="Register here" onAction="#goToRegister"
-                       style="-fx-text-fill: #aaaaaa; -fx-font-size: 12px;
-                              -fx-border-color: transparent;"/>
-        </HBox>
-
-        <Region VBox.vgrow="ALWAYS"/>
-
-        <Label text="Barangay San Isidro © 2025"
-               style="-fx-font-size: 10px; -fx-text-fill: #333333;">
-            <VBox.margin><Insets top="60"/></VBox.margin>
-        </Label>
-
-    </VBox>
-</HBox>
+        </VBox>
+    </HBox>
+</StackPane>

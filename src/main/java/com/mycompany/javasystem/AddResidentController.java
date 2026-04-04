@@ -54,6 +54,10 @@ public class AddResidentController {
 
         try {
             Connection conn = DatabaseConnection.getConnection();
+            if (conn == null) {
+                showMessage("Database not available - running in demo mode. Cannot add resident.", false);
+                return;
+            }
             String sql = "INSERT INTO residents (resident_id, full_name, age, address, status) VALUES (?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, residentId);

@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mycompany.javasystem.RequestDocumentController"
+            prefHeight="700.0" prefWidth="1100.0"
+            style="-fx-background-color: #f4f4f4;">
+
+    <!-- TOP BAR -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="65"       
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 0 1 0;
+                     -fx-padding: 0 24;">
+
+            <HBox alignment="CENTER_LEFT" spacing="12" HBox.hgrow="ALWAYS">
+                <Circle radius="18" fill="#2d2d2d"/>
+                <VBox alignment="CENTER_LEFT" spacing="2">
+                    <Label text="Barangay San Isidro"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Resident Portal"
+                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                </VBox>
+            </HBox>
+
+            <HBox alignment="CENTER_RIGHT" spacing="12">
+                <Button text="🔔  Alerts" onAction="#goBackToDashboard"
+                        style="-fx-background-color: #f4f4f4;
+                               -fx-text-fill: #333333;
+                               -fx-font-size: 12px;
+                               -fx-background-radius: 20;
+                               -fx-border-radius: 20;
+                               -fx-border-color: #e0e0e0;
+                               -fx-border-width: 1;
+                               -fx-padding: 8 16;
+                               -fx-cursor: hand;"/>
+
+                <HBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #f4f4f4;
+                             -fx-background-radius: 20;
+                             -fx-border-radius: 20;
+                             -fx-border-color: #e0e0e0;
+                             -fx-border-width: 1;
+                             -fx-padding: 6 16;">
+                    <Circle radius="14" fill="#2d2d2d"/>
+                    <VBox alignment="CENTER_LEFT" spacing="1">
+                        <Label text="Resident"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="Resident"
+                               style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                </HBox>
+
+                <Button fx:id="logoutButton" text="← Logout" onAction="#handleLogout"
+                    style="-fx-background-color: #ffffff;
+                        -fx-text-fill: #555555;
+                        -fx-font-size: 12px;
+                        -fx-background-radius: 8;
+                        -fx-border-radius: 8;
+                        -fx-border-color: #e0e0e0;
+                        -fx-border-width: 1;
+                        -fx-padding: 8 16;
+                        -fx-cursor: hand;"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- SIDEBAR -->
+    <left>
+        <VBox prefWidth="220" prefHeight="700"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 1 0 0;
+                     -fx-padding: 20 12;">
+
+            <Label text="MAIN"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="🏠   Dashboard" maxWidth="Infinity"
+                    onAction="#goBackToDashboard"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📄   My Documents" maxWidth="Infinity"
+                    onAction="#goToMyDocuments"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📝   Request Document" maxWidth="Infinity"
+                    style="-fx-background-color: #2d2d2d;
+                           -fx-text-fill: #ffffff;
+                           -fx-font-size: 13px;
+                           -fx-font-weight: bold;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="SERVICES"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="💳   Payments" maxWidth="Infinity"
+                    onAction="#goToPayments"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📢   My Complaints" maxWidth="Infinity"
+                    onAction="#goToComplaints"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📣   Announcements" maxWidth="Infinity"
+                    onAction="#goToAnnouncements"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="ACCOUNT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="👤   My Profile" maxWidth="Infinity"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+        </VBox>
+    </left>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background-color: #f4f4f4;
+                           -fx-background: #f4f4f4;
+                           -fx-border-color: transparent;">
+            <VBox spacing="20" style="-fx-padding: 24;" alignment="TOP_CENTER">
+
+                <!-- Page Header -->
+                <VBox spacing="8" alignment="CENTER">
+                    <Label text="Request Document"
+                           style="-fx-font-size: 24px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Choose a document type and fill out the form below"
+                           style="-fx-font-size: 13px; -fx-text-fill: #888888;"/>
+                </VBox>
+
+                <!-- Document Cards -->
+                <HBox spacing="16" alignment="CENTER">
+                    <!-- Barangay Clearance Card -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;"
+                          spacing="12"
+                          prefWidth="280">
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Circle radius="20" fill="#e3f2fd"/>
+                            <Label text="📜"
+                                   style="-fx-font-size: 20px;"/>
+                        </HBox>
+                        <Label text="Barangay Clearance"
+                               style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="For employment, bank, and legal purposes."
+                               wrapText="true"
+                               style="-fx-font-size: 12px; -fx-text-fill: #666666;"/>
+                        <HBox alignment="CENTER_LEFT" spacing="6">
+                            <Label text="⏱️"
+                                   style="-fx-font-size: 12px;"/>
+                            <Label text="Processing time: 1–2 business days"
+                                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Certificate of Residency Card -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;"
+                          spacing="12"
+                          prefWidth="280">
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Circle radius="20" fill="#e8f5e9"/>
+                            <Label text="🏠"
+                                   style="-fx-font-size: 20px;"/>
+                        </HBox>
+                        <Label text="Certificate of Residency"
+                               style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="Proof of residence in Barangay San Isidro."
+                               wrapText="true"
+                               style="-fx-font-size: 12px; -fx-text-fill: #666666;"/>
+                        <HBox alignment="CENTER_LEFT" spacing="6">
+                            <Label text="⏱️"
+                                   style="-fx-font-size: 12px;"/>
+                            <Label text="Processing time: Same day"
+                                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Certificate of Indigency Card -->
+                    <VBox style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;"
+                          spacing="12"
+                          prefWidth="280">
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <Circle radius="20" fill="#fff3e0"/>
+                            <Label text="🤝"
+                                   style="-fx-font-size: 20px;"/>
+                        </HBox>
+                        <Label text="Certificate of Indigency"
+                               style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="For medical, scholarship, and assistance."
+                               wrapText="true"
+                               style="-fx-font-size: 12px; -fx-text-fill: #666666;"/>
+                        <HBox alignment="CENTER_LEFT" spacing="6">
+                            <Label text="⏱️"
+                                   style="-fx-font-size: 12px;"/>
+                            <Label text="Processing time: 1 business day"
+                                   style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+
+                <!-- Request Form -->
+                <VBox style="-fx-background-color: #ffffff;
+                             -fx-background-radius: 10;
+                             -fx-border-color: #eeeeee;
+                             -fx-border-width: 1;
+                             -fx-padding: 32;"
+                      spacing="24"
+                      maxWidth="600"
+                      prefWidth="600">
+
+                    <Label text="Document Request Form"
+                           style="-fx-font-size: 18px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+
+                    <!-- Type of Document -->
+                    <VBox spacing="8">
+                        <Label text="Type of Document *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <ComboBox fx:id="documentTypeCombo" promptText="Select document type"
+                                  maxWidth="Infinity"
+                                  style="-fx-font-size: 13px;
+                                         -fx-background-color: #ffffff;
+                                         -fx-border-color: #e0e0e0;
+                                         -fx-border-radius: 6;
+                                         -fx-background-radius: 6;
+                                         -fx-padding: 10 12;"/>
+                        <Label text="Choose the type of document you need"
+                               style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                    </VBox>
+
+                    <!-- Full Name -->
+                    <VBox spacing="8">
+                        <Label text="Full Name *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <TextField fx:id="fullNameField" promptText="Enter your full name"
+                                   style="-fx-font-size: 13px;
+                                          -fx-background-color: #ffffff;
+                                          -fx-border-color: #e0e0e0;
+                                          -fx-border-radius: 6;
+                                          -fx-background-radius: 6;
+                                          -fx-padding: 10 12;"/>
+                    </VBox>
+
+                    <!-- Address -->
+                    <VBox spacing="8">
+                        <Label text="Address *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <TextField fx:id="addressField" promptText="Enter your complete address"
+                                   style="-fx-font-size: 13px;
+                                          -fx-background-color: #ffffff;
+                                          -fx-border-color: #e0e0e0;
+                                          -fx-border-radius: 6;
+                                          -fx-background-radius: 6;
+                                          -fx-padding: 10 12;"/>
+                    </VBox>
+
+                    <!-- Birthdate -->
+                    <VBox spacing="8">
+                        <Label text="Birthdate *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <DatePicker fx:id="birthDatePicker" promptText="mm/dd/yyyy"
+                                    maxWidth="Infinity"
+                                    style="-fx-font-size: 13px;
+                                           -fx-background-color: #ffffff;
+                                           -fx-border-color: #e0e0e0;
+                                           -fx-border-radius: 6;
+                                           -fx-background-radius: 6;"/>
+                    </VBox>
+
+                    <!-- Civil Status -->
+                    <VBox spacing="8">
+                        <Label text="Civil Status *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <ComboBox fx:id="civilStatusCombo" promptText="Select civil status"
+                                  maxWidth="Infinity"
+                                  style="-fx-font-size: 13px;
+                                         -fx-background-color: #ffffff;
+                                         -fx-border-color: #e0e0e0;
+                                         -fx-border-radius: 6;
+                                         -fx-background-radius: 6;
+                                         -fx-padding: 10 12;"/>
+                    </VBox>
+
+                    <!-- Purpose -->
+                    <VBox spacing="8">
+                        <Label text="Purpose *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <TextField fx:id="purposeField" promptText="e.g., Employment, School Requirements, etc."
+                                   style="-fx-font-size: 13px;
+                                          -fx-background-color: #ffffff;
+                                          -fx-border-color: #e0e0e0;
+                                          -fx-border-radius: 6;
+                                          -fx-background-radius: 6;
+                                          -fx-padding: 10 12;"/>
+                        <Label text="State the reason for requesting this document"
+                               style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                    </VBox>
+
+                    <!-- Years of Residency -->
+                    <VBox spacing="8">
+                        <Label text="Years of Residency *"
+                               style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                      -fx-text-fill: #333333;"/>
+                        <TextField fx:id="yearsOfResidencyField" promptText="Enter number of years"
+                                   style="-fx-font-size: 13px;
+                                          -fx-background-color: #ffffff;
+                                          -fx-border-color: #e0e0e0;
+                                          -fx-border-radius: 6;
+                                          -fx-background-radius: 6;
+                                          -fx-padding: 10 12;"/>
+                        <Label text="How many years have you lived in Barangay San Isidro?"
+                               style="-fx-font-size: 11px; -fx-text-fill: #888888;"/>
+                    </VBox>
+
+                    <!-- Error Label -->
+                    <Label fx:id="errorLabel" text=""
+                           style="-fx-text-fill: #e53935; -fx-font-size: 12px;"
+                           wrapText="true"/>
+
+                    <!-- Buttons -->
+                    <HBox spacing="12" alignment="CENTER">
+                        <Button text="Generate Document" onAction="#handleGenerateDocument"
+                                style="-fx-background-color: #2d2d2d;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 13px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 12 32;
+                                       -fx-cursor: hand;"/>
+                        <Button text="Cancel" onAction="#goBackToDashboard"
+                                style="-fx-background-color: #f4f4f4;
+                                       -fx-text-fill: #555555;
+                                       -fx-font-size: 13px;
+                                       -fx-background-radius: 8;
+                                       -fx-border-color: #e0e0e0;
+                                       -fx-border-width: 1;
+                                       -fx-border-radius: 8;
+                                       -fx-padding: 12 32;
+                                       -fx-cursor: hand;"/>
+                    </HBox>
+
+                    <!-- Info Box -->
+                    <VBox spacing="8"
+                          style="-fx-background-color: #e3f2fd;
+                                 -fx-background-radius: 8;
+                                 -fx-padding: 16;">
+                        <Label text="ℹ️  Important Information"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1976d2;"/>
+                        <Label text="• Documents will be generated and ready for printing"
+                               style="-fx-font-size: 11px; -fx-text-fill: #555555;"/>
+                        <Label text="• Please bring a valid ID when claiming your document"
+                               style="-fx-font-size: 11px; -fx-text-fill: #555555;"/>
+                        <Label text="• Claiming hours: Monday-Friday, 8:00 AM - 5:00 PM"
+                               style="-fx-font-size: 11px; -fx-text-fill: #555555;"/>
+                    </VBox>
+
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

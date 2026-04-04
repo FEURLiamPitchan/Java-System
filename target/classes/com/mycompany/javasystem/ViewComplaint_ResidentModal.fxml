@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.mycompany.javasystem.ViewComplaint_ResidentController"
+      spacing="16" prefWidth="500"
+      style="-fx-padding: 28; -fx-background-color: #ffffff;">
+
+    <Label fx:id="complaintIdLabel" text="Complaint ID: "
+           style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+
+    <!-- Complainant Info -->
+    <VBox spacing="6">
+        <Label text="Complainant"
+               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+        <Label fx:id="nameLabel" text=""
+               style="-fx-font-size: 14px; -fx-text-fill: #333333;"/>
+    </VBox>
+
+    <!-- Incident Details -->
+    <HBox spacing="16">
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Incident Type"
+                   style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+            <Label fx:id="typeLabel" text=""
+                   style="-fx-font-size: 14px; -fx-text-fill: #333333;"/>
+        </VBox>
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Location"
+                   style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+            <Label fx:id="locationLabel" text=""
+                   style="-fx-font-size: 14px; -fx-text-fill: #333333;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Date and Status -->
+    <HBox spacing="16">
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Date Filed"
+                   style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+            <Label fx:id="dateLabel" text=""
+                   style="-fx-font-size: 14px; -fx-text-fill: #333333;"/>
+        </VBox>
+        <VBox spacing="6" HBox.hgrow="ALWAYS">
+            <Label text="Status"
+                   style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+            <Label fx:id="statusLabel" text=""
+                   style="-fx-font-size: 14px; -fx-text-fill: #333333;"/>
+        </VBox>
+    </HBox>
+
+    <!-- Incident Details -->
+    <VBox spacing="6">
+        <Label text="Incident Details"
+               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+        <Label fx:id="detailsLabel" text="" wrapText="true"
+               style="-fx-font-size: 13px; -fx-text-fill: #333333;
+                      -fx-background-color: #f9f9f9;
+                      -fx-background-radius: 6;
+                      -fx-padding: 12;"/>
+    </VBox>
+
+    <!-- Photo Info -->
+    <VBox spacing="6">
+        <Label text="Photo Evidence"
+               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+        <Label fx:id="photoLabel" text=""
+               style="-fx-font-size: 13px; -fx-text-fill: #666666;"/>
+    </VBox>
+
+    <!-- Admin Response -->
+    <VBox spacing="6">
+        <Label text="Official Response"
+               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #555555;"/>
+        <Label fx:id="responseLabel" text="" wrapText="true"
+               style="-fx-font-size: 13px; -fx-text-fill: #333333;
+                      -fx-background-color: #f0f8ff;
+                      -fx-background-radius: 6;
+                      -fx-padding: 12;"/>
+    </VBox>
+
+    <!-- Info Box -->
+    <VBox spacing="8"
+          style="-fx-background-color: #e8f5e9;
+                 -fx-background-radius: 8;
+                 -fx-padding: 16;">
+        <Label text="ℹ️  Information"
+               style="-fx-font-size: 12px; -fx-font-weight: bold;
+                      -fx-text-fill: #2e7d32;"/>
+        <Label text="This is a read-only view of the complaint details. For updates or inquiries, please contact the barangay office directly."
+               style="-fx-font-size: 11px; -fx-text-fill: #555555;"
+               wrapText="true"/>
+    </VBox>
+
+    <!-- Close Button -->
+    <HBox alignment="CENTER">
+        <Button text="Close" onAction="#handleClose"
+                style="-fx-background-color: #2d2d2d;
+                       -fx-text-fill: #ffffff;
+                       -fx-font-size: 12px;
+                       -fx-background-radius: 8;
+                       -fx-padding: 10 20;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+</VBox>

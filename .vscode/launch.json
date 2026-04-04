@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "com.mycompany.javasystem/com.mycompany.javasystem.App",
+            "projectName": "JAVASYSTEM"
+        },
+        {
+            "type": "java",
+            "name": "Launch JavaFX App",
+            "request": "launch",
+            "mainClass": "com.mycompany.javasystem.App",
+            "projectName": "JAVASYSTEM",
+            "vmArgs": "-Dfile.encoding=UTF-8 --module-path \"${env:PATH_TO_FX}\" --add-modules javafx.controls,javafx.fxml",
+            "console": "integratedTerminal"
+        }
+    ]
+}

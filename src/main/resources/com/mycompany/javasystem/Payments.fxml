@@ -1,0 +1,417 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mycompany.javasystem.PaymentsController"
+            prefHeight="700.0" prefWidth="1100.0"
+            style="-fx-background-color: #f4f4f4;">
+
+    <!-- TOP BAR -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="65"       
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 0 1 0;
+                     -fx-padding: 0 24;">
+
+            <HBox alignment="CENTER_LEFT" spacing="12" HBox.hgrow="ALWAYS">
+                <Circle radius="18" fill="#2d2d2d"/>
+                <VBox alignment="CENTER_LEFT" spacing="2">
+                    <Label text="Barangay San Isidro"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Resident Portal"
+                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                </VBox>
+            </HBox>
+
+            <HBox alignment="CENTER_RIGHT" spacing="12">
+                <Button text="🔔  Alerts" onAction="#goBackToDashboard"
+                        style="-fx-background-color: #f4f4f4;
+                               -fx-text-fill: #333333;
+                               -fx-font-size: 12px;
+                               -fx-background-radius: 20;
+                               -fx-border-radius: 20;
+                               -fx-border-color: #e0e0e0;
+                               -fx-border-width: 1;
+                               -fx-padding: 8 16;
+                               -fx-cursor: hand;"/>
+
+                <HBox alignment="CENTER" spacing="8"
+                      style="-fx-background-color: #f4f4f4;
+                             -fx-background-radius: 20;
+                             -fx-border-radius: 20;
+                             -fx-border-color: #e0e0e0;
+                             -fx-border-width: 1;
+                             -fx-padding: 6 16;">
+                    <Circle radius="14" fill="#2d2d2d"/>
+                    <VBox alignment="CENTER_LEFT" spacing="1">
+                        <Label text="Resident"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"/>
+                        <Label text="Resident"
+                               style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                </HBox>
+
+                <Button fx:id="logoutButton" text="← Logout" onAction="#handleLogout"
+                    style="-fx-background-color: #ffffff;
+                        -fx-text-fill: #555555;
+                        -fx-font-size: 12px;
+                        -fx-background-radius: 8;
+                        -fx-border-radius: 8;
+                        -fx-border-color: #e0e0e0;
+                        -fx-border-width: 1;
+                        -fx-padding: 8 16;
+                        -fx-cursor: hand;"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- SIDEBAR -->
+    <left>
+        <VBox prefWidth="220" prefHeight="700"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 1 0 0;
+                     -fx-padding: 20 12;">
+
+            <Label text="MAIN"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="🏠   Dashboard" maxWidth="Infinity"
+                    onAction="#goBackToDashboard"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📄   My Documents" maxWidth="Infinity"
+                    onAction="#goToMyDocuments"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📝   Request Document" maxWidth="Infinity"
+                    onAction="#goToRequestDocument"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="SERVICES"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="💳   Payments" maxWidth="Infinity"
+                    style="-fx-background-color: #2d2d2d;
+                           -fx-text-fill: #ffffff;
+                           -fx-font-size: 13px;
+                           -fx-font-weight: bold;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📢   My Complaints" maxWidth="Infinity"
+                    onAction="#goToComplaints"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Button text="📣   Announcements" maxWidth="Infinity"
+                    onAction="#goToAnnouncements"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="ACCOUNT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+
+            <Button text="👤   My Profile" maxWidth="Infinity"
+                    onAction="#goToMyProfile"
+                    style="-fx-background-color: transparent;
+                           -fx-text-fill: #555555;
+                           -fx-font-size: 13px;
+                           -fx-background-radius: 8;
+                           -fx-padding: 11 16;
+                           -fx-alignment: CENTER_LEFT;
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+        </VBox>
+    </left>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background-color: #f4f4f4;
+                           -fx-background: #f4f4f4;
+                           -fx-border-color: transparent;">
+            <VBox spacing="20" style="-fx-padding: 24;">
+
+                <!-- Page Header -->
+                <VBox spacing="8">
+                    <Label text="Payments"
+                           style="-fx-font-size: 24px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Manage your document fees and payment history"
+                           style="-fx-font-size: 13px; -fx-text-fill: #888888;"/>
+                </VBox>
+
+                <!-- Payment Summary -->
+                <HBox spacing="16">
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Outstanding Balance"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="₱150.00"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #e53935;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="2 pending payments"
+                               style="-fx-font-size: 11px; -fx-text-fill: #e53935;"/>
+                    </VBox>
+
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Total Paid This Year"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="₱850.00"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #4caf50;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="12 completed payments"
+                               style="-fx-font-size: 11px; -fx-text-fill: #4caf50;"/>
+                    </VBox>
+
+                    <VBox HBox.hgrow="ALWAYS"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-background-radius: 10;
+                                 -fx-border-color: #eeeeee;
+                                 -fx-border-width: 1;
+                                 -fx-padding: 20;">
+                        <Label text="Next Payment Due"
+                               style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;">
+                            <VBox.margin><Insets bottom="6"/></VBox.margin>
+                        </Label>
+                        <Label text="June 20"
+                               style="-fx-font-size: 26px; -fx-font-weight: bold;
+                                      -fx-text-fill: #ff9800;">
+                            <VBox.margin><Insets bottom="4"/></VBox.margin>
+                        </Label>
+                        <Label text="Barangay Clearance fee"
+                               style="-fx-font-size: 11px; -fx-text-fill: #ff9800;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Pending Payments -->
+                <VBox style="-fx-background-color: #ffffff;
+                             -fx-background-radius: 10;
+                             -fx-border-color: #eeeeee;
+                             -fx-border-width: 1;
+                             -fx-padding: 24;"
+                      spacing="16">
+
+                    <HBox alignment="CENTER_LEFT" spacing="12">
+                        <Label text="Pending Payments"
+                               style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                      -fx-text-fill: #1a1a1a;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Button text="💳 Pay All"
+                                style="-fx-background-color: #4caf50;
+                                       -fx-text-fill: #ffffff;
+                                       -fx-font-size: 12px;
+                                       -fx-font-weight: bold;
+                                       -fx-background-radius: 8;
+                                       -fx-padding: 10 20;
+                                       -fx-cursor: hand;"/>
+                    </HBox>
+
+                    <!-- Payment Items -->
+                    <VBox spacing="12">
+                        <HBox style="-fx-padding: 16; -fx-background-color: #fff8e1; -fx-background-radius: 8; -fx-border-color: #f59e0b; -fx-border-width: 1; -fx-border-radius: 8;"
+                              alignment="CENTER_LEFT" spacing="16">
+                            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                <Label text="Barangay Clearance Fee"
+                                       style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                                <Label text="Request ID: #BR-2024-001 • Due: June 20, 2024"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
+                            </VBox>
+                            <Label text="₱100.00"
+                                   style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #f59e0b;"/>
+                            <Button text="Pay Now"
+                                    style="-fx-background-color: #f59e0b;
+                                           -fx-text-fill: #ffffff;
+                                           -fx-font-size: 11px;
+                                           -fx-font-weight: bold;
+                                           -fx-background-radius: 6;
+                                           -fx-padding: 8 16;
+                                           -fx-cursor: hand;"/>
+                        </HBox>
+
+                        <HBox style="-fx-padding: 16; -fx-background-color: #fff8e1; -fx-background-radius: 8; -fx-border-color: #f59e0b; -fx-border-width: 1; -fx-border-radius: 8;"
+                              alignment="CENTER_LEFT" spacing="16">
+                            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                <Label text="Certificate of Residency Fee"
+                                       style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                                <Label text="Request ID: #BR-2024-002 • Due: June 22, 2024"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #666666;"/>
+                            </VBox>
+                            <Label text="₱50.00"
+                                   style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #f59e0b;"/>
+                            <Button text="Pay Now"
+                                    style="-fx-background-color: #f59e0b;
+                                           -fx-text-fill: #ffffff;
+                                           -fx-font-size: 11px;
+                                           -fx-font-weight: bold;
+                                           -fx-background-radius: 6;
+                                           -fx-padding: 8 16;
+                                           -fx-cursor: hand;"/>
+                        </HBox>
+                    </VBox>
+
+                </VBox>
+
+                <!-- Payment History -->
+                <VBox style="-fx-background-color: #ffffff;
+                             -fx-background-radius: 10;
+                             -fx-border-color: #eeeeee;
+                             -fx-border-width: 1;
+                             -fx-padding: 24;"
+                      spacing="16">
+
+                    <Label text="Payment History"
+                           style="-fx-font-size: 16px; -fx-font-weight: bold;
+                                  -fx-text-fill: #1a1a1a;"/>
+
+                    <!-- Table Header -->
+                    <HBox style="-fx-padding: 12 8; -fx-background-color: #f8f8f8; -fx-background-radius: 6;">
+                        <Label text="DATE" prefWidth="100"
+                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+                        <Label text="DESCRIPTION" prefWidth="250"
+                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+                        <Label text="AMOUNT" prefWidth="100"
+                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+                        <Label text="STATUS" prefWidth="100"
+                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+                        <Label text="RECEIPT" prefWidth="100"
+                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #888888;"/>
+                    </HBox>
+
+                    <!-- Payment Records -->
+                    <VBox spacing="8">
+                        <HBox style="-fx-padding: 12 8; -fx-border-color: #f0f0f0; -fx-border-width: 0 0 1 0;"
+                              alignment="CENTER_LEFT">
+                            <Label text="Jun 10" prefWidth="100"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Indigency Certificate Fee" prefWidth="250"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
+                            <Label text="₱30.00" prefWidth="100"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Paid" prefWidth="100"
+                                   style="-fx-background-color: #e8f5e9; -fx-text-fill: #4caf50; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 3 8;"/>
+                            <Button text="📄 View" prefWidth="100"
+                                    style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555; -fx-font-size: 10px; -fx-background-radius: 4; -fx-padding: 4 8; -fx-cursor: hand;"/>
+                        </HBox>
+
+                        <HBox style="-fx-padding: 12 8; -fx-border-color: #f0f0f0; -fx-border-width: 0 0 1 0;"
+                              alignment="CENTER_LEFT">
+                            <Label text="Jun 8" prefWidth="100"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Business Permit Fee" prefWidth="250"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
+                            <Label text="₱200.00" prefWidth="100"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Paid" prefWidth="100"
+                                   style="-fx-background-color: #e8f5e9; -fx-text-fill: #4caf50; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 3 8;"/>
+                            <Button text="📄 View" prefWidth="100"
+                                    style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555; -fx-font-size: 10px; -fx-background-radius: 4; -fx-padding: 4 8; -fx-cursor: hand;"/>
+                        </HBox>
+
+                        <HBox style="-fx-padding: 12 8;"
+                              alignment="CENTER_LEFT">
+                            <Label text="May 25" prefWidth="100"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Barangay Clearance Fee" prefWidth="250"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #1a1a1a; -fx-font-weight: bold;"/>
+                            <Label text="₱100.00" prefWidth="100"
+                                   style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                            <Label text="Paid" prefWidth="100"
+                                   style="-fx-background-color: #e8f5e9; -fx-text-fill: #4caf50; -fx-font-size: 10px; -fx-font-weight: bold; -fx-background-radius: 4; -fx-padding: 3 8;"/>
+                            <Button text="📄 View" prefWidth="100"
+                                    style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555; -fx-font-size: 10px; -fx-background-radius: 4; -fx-padding: 4 8; -fx-cursor: hand;"/>
+                        </HBox>
+                    </VBox>
+
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

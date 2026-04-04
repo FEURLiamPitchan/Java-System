@@ -112,7 +112,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
@@ -123,7 +125,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
@@ -134,7 +138,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="16"/></VBox.margin>
             </Button>
 
@@ -150,7 +156,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
@@ -161,7 +169,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="16"/></VBox.margin>
             </Button>
 
@@ -177,7 +187,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
@@ -188,7 +200,9 @@
                            -fx-background-radius: 8;
                            -fx-padding: 11 16;
                            -fx-alignment: CENTER_LEFT;
-                           -fx-cursor: hand;">
+                           -fx-cursor: hand;"
+                    onMouseEntered="#handleMouseEntered"
+                    onMouseExited="#handleMouseExited">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
 
