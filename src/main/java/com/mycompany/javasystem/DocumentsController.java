@@ -11,6 +11,10 @@ import javafx.scene.layout.*;
 import javafx.scene.shape.Circle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import java.io.File;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.util.Duration;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -42,7 +46,8 @@ public class DocumentsController {
         loadAvatarPicture();
         filterStatus.getItems().addAll("All", "Pending", "Processing", "Released", "Rejected");
         filterStatus.setValue("All");
-        filterType.getItems().addAll("All", "Clearance", "Residency", "Indigency");
+        filterType.getItems().addAll("All", "Barangay Clearance", "Certificate of Residency",
+                "Certificate of Indigency");
         filterType.setValue("All");
         loadDocuments("", "All", "All");
         syncNotifications();
@@ -50,7 +55,7 @@ public class DocumentsController {
         Platform.runLater(() -> documentsTableBody.requestFocus());
     }
 
-    // ── Top Bar ────────────────────────────────────────────────────���──────────────
+    // ── Top Bar ───────────────────────────────────────────────────────────────────
     private void loadTopBar() {
         String name = SessionManager.getName();
         String role = SessionManager.getRole();
@@ -63,10 +68,7 @@ public class DocumentsController {
     private void loadAvatarPicture() {
         ProfilePictureManager.loadAvatarPicture(
             SessionManager.getEmail(),
-            avatarBox,
-            avatarCircle,
-            profileImageView,
-            avatarInitialLabel
+            avatarBox, avatarCircle, profileImageView, avatarInitialLabel
         );
     }
 
@@ -81,57 +83,62 @@ public class DocumentsController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT * FROM document_requests ORDER BY id");
+                "SELECT * FROM document_requests ORDER BY id DESC");
             ResultSet rs = stmt.executeQuery();
             boolean hasData = false;
 
             while (rs.next()) {
-                String refNumber    = rs.getString("ref_number");
-                String residentName = rs.getString("resident_name");
-                String docType      = rs.getString("document_type");
-                String dateFiled    = rs.getString("date_filed");
-                String docStatus    = rs.getString("status");
+                String requestId = rs.getString("request_id");
+                String fullName  = rs.getString("full_name");
+                String docType   = rs.getString("document_type");
+                String dateReq   = rs.getString("date_requested");
+                String docStatus = rs.getString("status");
 
+                // Search filter
                 if (!search.isEmpty()) {
-                    if (!residentName.toLowerCase().contains(search.toLowerCase()) &&
-                        !refNumber.toLowerCase().contains(search.toLowerCase())) continue;
+                    String lSearch = search.toLowerCase();
+                    if (!fullName.toLowerCase().contains(lSearch) &&
+                        !requestId.toLowerCase().contains(lSearch)) continue;
                 }
-                if (!status.equals("All") && !docStatus.equals(status)) continue;
-                if (!type.equals("All") && !docType.equals(type)) continue;
+                // Status filter
+                if (!status.equals("All") && !docStatus.equalsIgnoreCase(status)) continue;
+                // Type filter
+                if (!type.equals("All") && !docType.equalsIgnoreCase(type)) continue;
 
                 hasData = true;
+
                 HBox row = new HBox();
                 row.setStyle("-fx-padding: 14 16; -fx-border-color: #f8f8f8;" +
-                    "-fx-border-width: 0 0 1 0;");
+                             "-fx-border-width: 0 0 1 0;");
 
-                Label refLabel = new Label(refNumber);
-                refLabel.setPrefWidth(120);
+                Label refLabel = new Label(requestId != null ? requestId : "—");
+                refLabel.setPrefWidth(125);
                 refLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
-                Label nameLabel = new Label(residentName);
+                Label nameLabel = new Label(fullName != null ? fullName : "—");
                 nameLabel.setPrefWidth(220);
-                nameLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+                nameLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
 
-                Label typeLabel = new Label(docType);
+                Label typeLabel = new Label(docType != null ? docType : "—");
                 typeLabel.setPrefWidth(180);
                 typeLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
-                Label dateLabel = new Label(dateFiled != null ? dateFiled : "N/A");
+                Label dateLabel = new Label(dateReq != null ? dateReq : "N/A");
                 dateLabel.setPrefWidth(150);
                 dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
+                // Status badge
                 String statusBg, statusFg;
-                if ("Released".equals(docStatus)) {
+                if ("Released".equalsIgnoreCase(docStatus)) {
                     statusBg = "#e8f5e9"; statusFg = "#4caf50";
-                } else if ("Processing".equals(docStatus)) {
+                } else if ("Processing".equalsIgnoreCase(docStatus)) {
                     statusBg = "#e3f2fd"; statusFg = "#1e88e5";
-                } else if ("Rejected".equals(docStatus)) {
+                } else if ("Rejected".equalsIgnoreCase(docStatus)) {
                     statusBg = "#ffebee"; statusFg = "#e53935";
                 } else {
                     statusBg = "#fff8e1"; statusFg = "#f59e0b";
                 }
-                Label statusLabel = new Label(docStatus);
+                Label statusLabel = new Label(docStatus != null ? docStatus : "Pending");
                 statusLabel.setStyle(
                     "-fx-background-color: " + statusBg + ";" +
                     "-fx-text-fill: " + statusFg + ";" +
@@ -141,50 +148,51 @@ public class DocumentsController {
                 statusBox.setPrefWidth(130);
                 statusBox.setAlignment(Pos.CENTER_LEFT);
 
-                HBox actionBox = new HBox(8);
+                // Action buttons
+                HBox actionBox = new HBox(6);
                 actionBox.setPrefWidth(200);
                 actionBox.setAlignment(Pos.CENTER_LEFT);
 
-                final String fRef  = refNumber;
-                final String fName = residentName;
-                final String fType = docType;
-                final String fDate = dateFiled;
+                final String fRequestId = requestId;
+                final String fName      = fullName;
+                final String fType      = docType;
+                final String fDate      = dateReq;
 
-                if ("Pending".equals(docStatus)) {
+                // View button — always visible
+                Button viewBtn = createActionBtn("View", "#f4f4f4", "#333333");
+                viewBtn.setOnAction(e -> openViewModal(fRequestId));
+                actionBox.getChildren().add(viewBtn);
+
+                if ("Pending".equalsIgnoreCase(docStatus)) {
                     Button approveBtn = createActionBtn("Approve", "#2d2d2d", "#ffffff");
                     Button rejectBtn  = createActionBtn("Reject",  "#fff0f0", "#e53935");
-                    approveBtn.setOnAction(e -> updateStatus(fRef, "Processing"));
-                    rejectBtn.setOnAction(e -> updateStatus(fRef, "Rejected"));
+                    approveBtn.setOnAction(e -> updateStatus(fRequestId, "Processing"));
+                    rejectBtn.setOnAction(e  -> updateStatus(fRequestId, "Rejected"));
                     actionBox.getChildren().addAll(approveBtn, rejectBtn);
-                } else if ("Processing".equals(docStatus)) {
+                } else if ("Processing".equalsIgnoreCase(docStatus)) {
                     Button releaseBtn = createActionBtn("Release", "#2d2d2d", "#ffffff");
                     Button rejectBtn  = createActionBtn("Reject",  "#fff0f0", "#e53935");
-                    releaseBtn.setOnAction(e -> updateStatus(fRef, "Released"));
-                    rejectBtn.setOnAction(e -> updateStatus(fRef, "Rejected"));
+                    releaseBtn.setOnAction(e -> updateStatus(fRequestId, "Released"));
+                    rejectBtn.setOnAction(e  -> updateStatus(fRequestId, "Rejected"));
                     actionBox.getChildren().addAll(releaseBtn, rejectBtn);
-                } else if ("Released".equals(docStatus)) {
-                    Button printBtn = createActionBtn("Print", "#f4f4f4", "#333333");
-                    printBtn.setOnAction(e -> handlePrint(fRef, fName, fType, fDate));
+                } else if ("Released".equalsIgnoreCase(docStatus)) {
+                    Button printBtn = createActionBtn("Print", "#e8f5e9", "#4caf50");
+                    printBtn.setOnAction(e -> handlePrint(fRequestId));
                     actionBox.getChildren().add(printBtn);
-                } else {
-                    Label noAction = new Label("No actions available");
-                    noAction.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
-                    actionBox.getChildren().add(noAction);
                 }
 
-                row.getChildren().addAll(
-                    refLabel, nameLabel, typeLabel, dateLabel, statusBox, actionBox);
+                row.getChildren().addAll(refLabel, nameLabel, typeLabel, dateLabel, statusBox, actionBox);
                 documentsTableBody.getChildren().add(row);
             }
 
             if (!hasData) {
                 Label empty = new Label("No document requests found.");
-                empty.setStyle(
-                    "-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;");
-                VBox.setMargin(empty, new Insets(20, 0, 20, 0));
+                empty.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;");
+                VBox.setMargin(empty, new Insets(20, 0, 20, 16));
                 documentsTableBody.getChildren().add(empty);
             }
             rs.close(); stmt.close(); conn.close();
+
         } catch (Exception e) {
             e.printStackTrace();
             Label error = new Label("Error loading requests: " + e.getMessage());
@@ -193,6 +201,245 @@ public class DocumentsController {
         }
     }
 
+    // ── View Modal ────────────────────────────────────────────────────────────────
+    private void openViewModal(String requestId) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT * FROM document_requests WHERE request_id = ?");
+            stmt.setString(1, requestId);
+            ResultSet rs = stmt.executeQuery();
+            if (!rs.next()) { rs.close(); stmt.close(); conn.close(); return; }
+
+            String fullName       = rs.getString("full_name");
+            String docType        = rs.getString("document_type");
+            String age            = rs.getString("age");
+            String gender         = rs.getString("gender");
+            String birthPlace     = rs.getString("birth_place");
+            String birthDate      = rs.getString("birth_date");
+            String civilStatus    = rs.getString("civil_status");
+            String address        = rs.getString("address");
+            String yearsResidency = rs.getString("years_residency");
+            String contactNumber  = rs.getString("contact_number");
+            String emailAddress   = rs.getString("email_address");
+            String purpose        = rs.getString("purpose");
+            String occupation     = rs.getString("occupation");
+            String headOfFamily   = rs.getString("head_of_family");
+            String familyMembers  = rs.getString("family_members");
+            String monthlyIncome  = rs.getString("monthly_income");
+            String incomeSource   = rs.getString("income_source");
+            String validIdPath    = rs.getString("valid_id_path");
+            String proofResPath   = rs.getString("proof_of_residency_path");
+            String proofIncPath   = rs.getString("proof_of_income_path");
+            String status         = rs.getString("status");
+            String dateRequested  = rs.getString("date_requested");
+            String dateCompleted  = rs.getString("date_completed");
+            rs.close(); stmt.close(); conn.close();
+
+            Stage modal = new Stage();
+            modal.initModality(Modality.APPLICATION_MODAL);
+            modal.initOwner(logoutButton.getScene().getWindow());
+            modal.setTitle("Document Request — " + requestId);
+            modal.setResizable(false);
+
+            VBox root = new VBox(0);
+            root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 640; -fx-max-width: 640;");
+
+            // ── Header ──
+            String hBg, hFg;
+            if ("Released".equalsIgnoreCase(status))        { hBg = "#e8f5e9"; hFg = "#4caf50"; }
+            else if ("Processing".equalsIgnoreCase(status)) { hBg = "#e3f2fd"; hFg = "#1e88e5"; }
+            else if ("Rejected".equalsIgnoreCase(status))   { hBg = "#ffebee"; hFg = "#e53935"; }
+            else                                             { hBg = "#fff8e1"; hFg = "#f59e0b"; }
+
+            Label statusBadge = new Label(status != null ? status : "Pending");
+            statusBadge.setStyle(
+                "-fx-background-color: " + hBg + "; -fx-text-fill: " + hFg + ";" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 4; -fx-padding: 4 10;");
+
+            VBox headerText = new VBox(4);
+            HBox.setHgrow(headerText, Priority.ALWAYS);
+            Label titleLbl = new Label(docType != null ? docType : "Document Request");
+            titleLbl.setStyle("-fx-font-size: 17px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+            Label subLbl = new Label("Request ID: " + requestId + "   •   Filed: " +
+                (dateRequested != null ? dateRequested : "N/A"));
+            subLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+            headerText.getChildren().addAll(titleLbl, subLbl);
+
+            HBox headerRow = new HBox(12);
+            headerRow.setAlignment(Pos.CENTER_LEFT);
+            headerRow.getChildren().addAll(headerText, statusBadge);
+
+            VBox header = new VBox(4);
+            header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 22 28;");
+            header.getChildren().add(headerRow);
+
+            // ── Scrollable Body ──
+            ScrollPane scroll = new ScrollPane();
+            scroll.setFitToWidth(true);
+            scroll.setPrefHeight(460);
+            scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;" +
+                            "-fx-border-color: transparent;");
+
+            VBox body = new VBox(20);
+            body.setStyle("-fx-padding: 24 28;");
+
+            // Personal Information
+            body.getChildren().add(sectionLabel("Personal Information"));
+            GridPane personalGrid = new GridPane();
+            personalGrid.setHgap(16); personalGrid.setVgap(12);
+            personalGrid.getColumnConstraints().addAll(cloneCol(50), cloneCol(50));
+            addField(personalGrid, "Full Name",    fullName,    0, 0, true);
+            addField(personalGrid, "Age",          age,         1, 0, false);
+            addField(personalGrid, "Gender",       gender,      1, 1, false);
+            addField(personalGrid, "Birth Place",  birthPlace,  2, 0, false);
+            addField(personalGrid, "Birth Date",   birthDate,   2, 1, false);
+            addField(personalGrid, "Civil Status", civilStatus, 3, 0, false);
+            body.getChildren().add(personalGrid);
+
+            // Contact & Address
+            body.getChildren().add(sectionLabel("Contact & Address"));
+            GridPane contactGrid = new GridPane();
+            contactGrid.setHgap(16); contactGrid.setVgap(12);
+            contactGrid.getColumnConstraints().addAll(cloneCol(50), cloneCol(50));
+            addField(contactGrid, "Address",            address,        0, 0, true);
+            addField(contactGrid, "Years of Residency", yearsResidency, 1, 0, false);
+            addField(contactGrid, "Contact Number",     contactNumber,  1, 1, false);
+            addField(contactGrid, "Email Address",      emailAddress,   2, 0, true);
+            body.getChildren().add(contactGrid);
+
+            // Request Details
+            body.getChildren().add(sectionLabel("Request Details"));
+            GridPane reqGrid = new GridPane();
+            reqGrid.setHgap(16); reqGrid.setVgap(12);
+            reqGrid.getColumnConstraints().addAll(cloneCol(50), cloneCol(50));
+            addField(reqGrid, "Purpose of Request", purpose, 0, 0, true);
+            body.getChildren().add(reqGrid);
+
+            // Indigency Details (only for Certificate of Indigency)
+            boolean isIndigency = docType != null && docType.toLowerCase().contains("indigency");
+            if (isIndigency) {
+                body.getChildren().add(sectionLabel("Indigency Details"));
+                GridPane indGrid = new GridPane();
+                indGrid.setHgap(16); indGrid.setVgap(12);
+                indGrid.getColumnConstraints().addAll(cloneCol(50), cloneCol(50));
+                addField(indGrid, "Occupation",     occupation,    0, 0, false);
+                addField(indGrid, "Head of Family", headOfFamily,  0, 1, false);
+                addField(indGrid, "Family Members", familyMembers, 1, 0, false);
+                addField(indGrid, "Monthly Income",
+                    monthlyIncome != null && !monthlyIncome.isEmpty()
+                        ? "₱ " + monthlyIncome : null,             1, 1, false);
+                addField(indGrid, "Income Source",  incomeSource,  2, 0, true);
+                body.getChildren().add(indGrid);
+            }
+
+            // Uploaded Documents
+            boolean hasValidId  = validIdPath  != null && !validIdPath.isEmpty();
+            boolean hasResProof = proofResPath != null && !proofResPath.isEmpty();
+            boolean hasIncProof = proofIncPath != null && !proofIncPath.isEmpty();
+            if (hasValidId || hasResProof || hasIncProof) {
+                body.getChildren().add(sectionLabel("Uploaded Documents"));
+                VBox docsBox = new VBox(8);
+                if (hasValidId)  docsBox.getChildren().add(fileChip("Valid ID",           validIdPath));
+                if (hasResProof) docsBox.getChildren().add(fileChip("Proof of Residency", proofResPath));
+                if (hasIncProof) docsBox.getChildren().add(fileChip("Proof of Income",    proofIncPath));
+                body.getChildren().add(docsBox);
+            }
+
+            // Completion
+            if (dateCompleted != null && !dateCompleted.isEmpty()) {
+                body.getChildren().add(sectionLabel("Completion"));
+                GridPane compGrid = new GridPane();
+                compGrid.setHgap(16); compGrid.setVgap(12);
+                compGrid.getColumnConstraints().addAll(cloneCol(50), cloneCol(50));
+                addField(compGrid, "Date Completed", dateCompleted, 0, 0, false);
+                body.getChildren().add(compGrid);
+            }
+
+            scroll.setContent(body);
+
+            // Footer
+            HBox footer = new HBox(10);
+            footer.setStyle(
+                "-fx-padding: 16 28; -fx-alignment: CENTER_RIGHT;" +
+                "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
+            Button closeBtn = new Button("Close");
+            closeBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 12px; -fx-background-radius: 8;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+                "-fx-padding: 10 24; -fx-cursor: hand;");
+            closeBtn.setOnAction(e -> modal.close());
+            footer.getChildren().add(closeBtn);
+
+            root.getChildren().addAll(header, scroll, footer);
+            modal.setScene(new Scene(root));
+            Platform.runLater(() -> root.requestFocus());
+            modal.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ── Modal Helpers ─────────────────────────────────────────────────────────────
+    private Label sectionLabel(String text) {
+        Label lbl = new Label(text);
+        lbl.setMaxWidth(Double.MAX_VALUE);
+        lbl.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;" +
+            "-fx-border-color: #eeeeee; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 8 0;");
+        VBox.setMargin(lbl, new Insets(4, 0, 0, 0));
+        return lbl;
+    }
+
+    private void addField(GridPane grid, String label, String value,
+                           int row, int col, boolean fullWidth) {
+        VBox cell = new VBox(4);
+        Label lbl = new Label(label);
+        lbl.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;");
+        Label val = new Label(value != null && !value.isEmpty() ? value : "—");
+        val.setWrapText(true);
+        val.setStyle(
+            "-fx-font-size: 13px; -fx-text-fill: #1a1a1a;" +
+            "-fx-background-color: #f8f8f8; -fx-background-radius: 6;" +
+            "-fx-border-color: #eeeeee; -fx-border-width: 1; -fx-border-radius: 6;" +
+            "-fx-padding: 8 12;");
+        val.setMaxWidth(Double.MAX_VALUE);
+        cell.getChildren().addAll(lbl, val);
+        if (fullWidth) GridPane.setColumnSpan(cell, 2);
+        grid.add(cell, col, row);
+    }
+
+    private HBox fileChip(String label, String path) {
+        HBox chip = new HBox(10);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        chip.setStyle(
+            "-fx-background-color: #f8f8f8; -fx-background-radius: 6;" +
+            "-fx-border-color: #eeeeee; -fx-border-width: 1; -fx-border-radius: 6;" +
+            "-fx-padding: 10 14;");
+        Label icon = new Label("📎");
+        icon.setStyle("-fx-font-size: 14px;");
+        VBox info = new VBox(2);
+        Label lbl = new Label(label);
+        lbl.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;");
+        Label pathLbl = new Label(path);
+        pathLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #555555;");
+        pathLbl.setWrapText(true);
+        info.getChildren().addAll(lbl, pathLbl);
+        HBox.setHgrow(info, Priority.ALWAYS);
+        chip.getChildren().addAll(icon, info);
+        return chip;
+    }
+
+    private ColumnConstraints cloneCol(double percent) {
+        ColumnConstraints c = new ColumnConstraints();
+        c.setPercentWidth(percent);
+        return c;
+    }
+
+    // ── Action Helpers ────────────────────────────────────────────────────────────
     private Button createActionBtn(String text, String bg, String fg) {
         Button btn = new Button(text);
         btn.setStyle(
@@ -202,20 +449,29 @@ public class DocumentsController {
         return btn;
     }
 
-    private void updateStatus(String refNumber, String newStatus) {
+    private void updateStatus(String requestId, String newStatus) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Confirm Action");
         confirm.setHeaderText("Change status to " + newStatus + "?");
-        confirm.setContentText("This will update the request status for " + refNumber + ".");
+        confirm.setContentText("This will update the request status for " + requestId + ".");
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 try {
                     Connection conn = DatabaseConnection.getConnection();
                     PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE document_requests SET status = ? WHERE ref_number = ?");
+                        "UPDATE document_requests SET status = ? WHERE request_id = ?");
                     stmt.setString(1, newStatus);
-                    stmt.setString(2, refNumber);
+                    stmt.setString(2, requestId);
                     stmt.executeUpdate();
+                    if ("Released".equals(newStatus)) {
+                        PreparedStatement stmtDate = conn.prepareStatement(
+                            "UPDATE document_requests SET date_completed = ? WHERE request_id = ?");
+                        stmtDate.setString(1, LocalDateTime.now()
+                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                        stmtDate.setString(2, requestId);
+                        stmtDate.executeUpdate();
+                        stmtDate.close();
+                    }
                     stmt.close(); conn.close();
                     loadDocuments(
                         searchField.getText().trim(),
@@ -226,16 +482,166 @@ public class DocumentsController {
         });
     }
 
-    private void handlePrint(String refNumber, String residentName,
-                              String docType, String dateFiled) {
-        Alert info = new Alert(Alert.AlertType.INFORMATION);
-        info.setTitle("Print Document");
-        info.setHeaderText("Print: " + docType);
-        info.setContentText(
-            "Ref: " + refNumber + "\nResident: " + residentName +
-            "\nDate Filed: " + dateFiled);
-        info.showAndWait();
+    private void handlePrint(String requestId) {
+      try {
+          // Fetch complete data from database
+          Connection conn = DatabaseConnection.getConnection();
+          PreparedStatement stmt = conn.prepareStatement(
+              "SELECT * FROM document_requests WHERE request_id = ?");
+          stmt.setString(1, requestId);
+          ResultSet rs = stmt.executeQuery();
+
+          if (!rs.next()) { 
+              rs.close(); 
+              stmt.close(); 
+              conn.close(); 
+              return; 
+          }
+
+          String fullName = rs.getString("full_name");
+          int age = rs.getInt("age");
+          String address = rs.getString("address");
+          String yearsResidency = rs.getString("years_residency");
+          String purpose = rs.getString("purpose");
+          String monthlyIncome = rs.getString("monthly_income");
+          String docType = rs.getString("document_type");
+          String barangayCity = rs.getString("barangay_city");
+          String barangayProvince = rs.getString("barangay_province");
+
+          rs.close(); 
+          stmt.close();
+
+          String orNumber = null;
+
+          // Only generate O.R. number for Barangay Clearance
+          if ("Barangay Clearance".equalsIgnoreCase(docType)) {
+              orNumber = generateORNumber(conn, docType);
+
+              // Store O.R. number in database
+              try {
+                  PreparedStatement updateStmt = conn.prepareStatement(
+                      "UPDATE document_requests SET or_number = ? WHERE request_id = ?");
+                  updateStmt.setString(1, orNumber);
+                  updateStmt.setString(2, requestId);
+                  updateStmt.executeUpdate();
+                  updateStmt.close();
+                  System.out.println("✅ O.R. Number stored: " + orNumber);
+              } catch (Exception e) {
+                  System.out.println("⚠️ Could not store O.R. number: " + e.getMessage());
+              }
+          }
+
+          conn.close();
+
+          // Generate certificate
+          String certificatePath = CertificateGenerator.generateCertificate(
+              docType,
+              requestId,
+              fullName,
+              age,
+              address,
+              yearsResidency,
+              purpose,
+              monthlyIncome,
+              barangayCity,
+              barangayProvince,
+              orNumber  // Will be null for Residency and Indigency
+          );
+
+          if (certificatePath != null && new File(certificatePath).exists()) {
+              openPDFInViewer(certificatePath);
+              showSuccess("Certificate generated and opened successfully!");
+          } else {
+              showError("Failed to generate certificate.");
+          }
+
+      } catch (Exception e) {
+          e.printStackTrace();
+          showError("Error: " + e.getMessage());
+      }
+  }
+ // ── Generate O.R. Number ──────────────────────────────────────────────────
+private String generateORNumber(Connection conn, String docType) {
+    try {
+        String year = String.valueOf(LocalDateTime.now().getYear());
+        
+        // Get count of released documents for this type (simpler query for Access)
+        PreparedStatement countStmt = conn.prepareStatement(
+            "SELECT COUNT(*) FROM document_requests WHERE document_type = ? " +
+            "AND or_number IS NOT NULL");
+        countStmt.setString(1, docType);
+        ResultSet rs = countStmt.executeQuery();
+        
+        int count = 0;
+        if (rs.next()) {
+            count = rs.getInt(1);
+        }
+        rs.close(); 
+        countStmt.close();
+        
+        // Generate O.R. number: OR-2026-001, OR-2026-002, etc.
+        String orNumber = String.format("OR-%s-%03d", year, count + 1);
+        return orNumber;
+        
+    } catch (Exception e) {
+        e.printStackTrace();
+        return "OR-ERR";
     }
+}
+
+    private void showSuccess(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Success");
+        alert.setContentText(message);
+
+        // Auto-close after 3 seconds
+        Timeline timeline = new Timeline(new KeyFrame(
+            Duration.seconds(3),
+            event -> alert.close()
+        ));
+        timeline.setCycleCount(1);
+
+        alert.show();
+        timeline.play();
+    }
+
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+    private void openPDFInViewer(String filePath) {
+    try {
+        File pdfFile = new File(filePath);
+        if (!pdfFile.exists()) {
+            showError("PDF file not found: " + filePath);
+            return;
+        }
+        
+        String os = System.getProperty("os.name").toLowerCase();
+        
+        try {
+            if (os.contains("win")) {
+                // Windows
+                Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", "", filePath});
+            } else if (os.contains("mac")) {
+                // macOS
+                Runtime.getRuntime().exec(new String[]{"open", filePath});
+            } else {
+                // Linux
+                Runtime.getRuntime().exec(new String[]{"xdg-open", filePath});
+            }
+            System.out.println("✅ PDF opened: " + filePath);
+        } catch (Exception e) {
+            System.out.println("⚠️ Could not open PDF with default viewer: " + e.getMessage());
+            showError("Could not open PDF. File saved at:\n" + filePath);
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        showError("Error: " + e.getMessage());
+    }
+}
 
     // ── Notifications ─────────────────────────────────────────────────────────────
     private void cleanupNotifications() {
@@ -374,15 +780,13 @@ public class DocumentsController {
         alertStage.setResizable(false);
 
         VBox root = new VBox(0);
-        root.setStyle(
-            "-fx-background-color: #ffffff; -fx-min-width: 480; -fx-max-width: 480;");
+        root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 480; -fx-max-width: 480;");
 
         VBox header = new VBox(4);
         header.setFocusTraversable(true);
         header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 20 24;");
         Label titleLbl = new Label("Notifications");
-        titleLbl.setStyle(
-            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        titleLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
         Label subLbl = new Label("Click a notification to view and take action");
         subLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(titleLbl, subLbl);
@@ -512,7 +916,7 @@ public class DocumentsController {
 
     private VBox buildNotifItem(String[] item, Runnable[] loadNotifsRef,
                                  boolean[] showingPast, Stage alertStage) {
-        String notifId = item[0]; String type  = item[1];
+        String notifId = item[0]; String type   = item[1];
         String message = item[2]; String isRead = item[3];
         String dateStr = item[4];
         if (dateStr != null && dateStr.length() > 16) dateStr = dateStr.substring(0, 16);

@@ -31,6 +31,7 @@ com\mycompany\javasystem\AdminController$12.class
 com\mycompany\javasystem\ProfilePictureManager.class
 com\mycompany\javasystem\AdminController$1.class
 com\mycompany\javasystem\ViewResidentController.class
+com\mycompany\javasystem\CertificateGenerator.class
 com\mycompany\javasystem\PaymentsController.class
 com\mycompany\javasystem\AnnouncementsModalController.class
 com\mycompany\javasystem\FinancesController$2.class
