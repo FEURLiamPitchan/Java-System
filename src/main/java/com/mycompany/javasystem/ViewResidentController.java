@@ -15,13 +15,16 @@ public class ViewResidentController {
     @FXML private Label addressLabel;
     @FXML private Label dateAddedLabel;
 
-    private String residentId;
+    private int residentId;
     private Runnable onDelete;
 
-    public void setResident(String residentId, String fullName, int age,
-                            String address, String status, String dateAdded) {
-        this.residentId = residentId;
-        residentIdLabel.setText(residentId);
+    // Updated to accept all 10 parameters
+    public void setResident(int id, String fullName, int age,
+                            String address, String status, String dateAdded,
+                            String gender, String birthPlace, String birthDate,
+                            String civilStatus, String contactNumber) {
+        this.residentId = id;
+        residentIdLabel.setText(String.valueOf(id));
         fullNameLabel.setText(fullName);
         ageLabel.setText(String.valueOf(age));
         addressLabel.setText(address);
@@ -51,9 +54,9 @@ public class ViewResidentController {
             if (response == ButtonType.OK) {
                 try {
                     Connection conn = DatabaseConnection.getConnection();
-                    String sql = "DELETE FROM residents WHERE resident_id = ?";
+                    String sql = "DELETE FROM residents WHERE id = ?";
                     PreparedStatement stmt = conn.prepareStatement(sql);
-                    stmt.setString(1, residentId);
+                    stmt.setInt(1, residentId);
                     stmt.executeUpdate();
                     stmt.close();
                     conn.close();

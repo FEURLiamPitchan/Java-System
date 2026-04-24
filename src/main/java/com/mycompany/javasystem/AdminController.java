@@ -131,22 +131,22 @@ public class AdminController {
         });
     }
 
-// Apply dark mode to current tab content
-private void applyDarkModeToCurrentTab() {
-    try {
-        if (!ThemeManager.isDarkMode || tabContent == null) return;
-        
-        for (javafx.scene.Node node : tabContent.getChildren()) {
-            if (node instanceof VBox) {
-                VBox tabVBox = (VBox) node;
-                styleNodeDarkMode(tabVBox);
+    // Apply dark mode to current tab content
+    private void applyDarkModeToCurrentTab() {
+        try {
+            if (!ThemeManager.isDarkMode || tabContent == null) return;
+            
+            for (javafx.scene.Node node : tabContent.getChildren()) {
+                if (node instanceof VBox) {
+                    VBox tabVBox = (VBox) node;
+                    styleNodeDarkMode(tabVBox);
+                }
             }
+        } catch (Exception e) {
+            System.out.println("[AdminController] Error applying dark mode to tab: " + e.getMessage());
+            e.printStackTrace();
         }
-    } catch (Exception e) {
-        System.out.println("[AdminController] Error applying dark mode to tab: " + e.getMessage());
-        e.printStackTrace();
     }
-}
 
     // Recursively style all nodes with stricter logic
     private void styleNodeDarkMode(javafx.scene.Node node) {
@@ -181,12 +181,11 @@ private void applyDarkModeToCurrentTab() {
             VBox vbox = (VBox) node;
             String style = vbox.getStyle();
 
-            // Skip colored stat cards (e8f5e9, ffebee, e3f2fd, fce4ec, fff8e1, f3e5f5)
+            // Skip colored stat cards
             if (style != null && (style.contains("#e8f5e9") || style.contains("#ffebee") || 
                 style.contains("#e3f2fd") || style.contains("#fce4ec") || 
                 style.contains("#fff8e1") || style.contains("#f3e5f5") ||
                 style.contains("#1a1a1a"))) {
-                // Skip - keep colored cards and dark cards as is
                 for (javafx.scene.Node child : vbox.getChildren()) {
                     styleNodeDarkMode(child);
                 }
@@ -207,7 +206,6 @@ private void applyDarkModeToCurrentTab() {
             HBox hbox = (HBox) node;
             String style = hbox.getStyle();
             if (style != null) {
-                // Skip colored cards
                 if (style.contains("#e8f5e9") || style.contains("#ffebee") || 
                     style.contains("#e3f2fd") || style.contains("#fce4ec") ||
                     style.contains("#fff8e1") || style.contains("#f3e5f5") ||
@@ -218,7 +216,6 @@ private void applyDarkModeToCurrentTab() {
                     return;
                 }
 
-                // Convert white to dark
                 if (style.contains("-fx-background-color: #ffffff")) {
                     hbox.setStyle("-fx-background-color: #1a1a1a;");
                 }
@@ -262,37 +259,7 @@ private void applyDarkModeToCurrentTab() {
             }
         }
     }
-private void styleTableDarkMode(TableView<String[]> table) {
-    if (!ThemeManager.isDarkMode) return;
-    
-    Platform.runLater(() -> {
-        // Style header
-        table.lookupAll(".column-header").forEach(header -> {
-            header.setStyle(
-                "-fx-background-color: #2a2a2a;" +
-                "-fx-text-fill: #ffffff;" +
-                "-fx-font-weight: bold;" +
-                "-fx-font-size: 12px;");
-        });
-        
-        table.lookupAll(".column-header-background").forEach(header -> {
-            header.setStyle("-fx-background-color: #2a2a2a;");
-        });
-        
-        // Style table cells and rows
-        table.lookupAll(".table-row-cell").forEach(row -> {
-            row.setStyle(
-                "-fx-text-fill: #ffffff;" +
-                "-fx-font-size: 12px;");
-        });
-        
-        table.lookupAll(".table-cell").forEach(cell -> {
-            cell.setStyle(
-                "-fx-text-fill: #ffffff;" +
-                "-fx-font-size: 12px;");
-        });
-    });
-}
+
     // TOP BAR
     private void loadTopBar() {
         String name = SessionManager.getName();
@@ -324,116 +291,129 @@ private void styleTableDarkMode(TableView<String[]> table) {
         SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
     }
 
-    // NOTIFICATIONS
-    private void cleanupNotifications() {
-        String email = SessionManager.getEmail();
-        if (email == null) return;
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(true);
-
-            PreparedStatement stmt1 = conn.prepareStatement(
-                "DELETE FROM notifications WHERE type = 'announcement' " +
-                "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT announcement_id FROM announcements)");
-            stmt1.setString(1, email);
-            stmt1.executeUpdate();
-            stmt1.close();
-
-            PreparedStatement stmt2 = conn.prepareStatement(
-                "DELETE FROM notifications WHERE type = 'complaint' " +
-                "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT complaint_id FROM complaints WHERE status <> 'Resolved')");
-            stmt2.setString(1, email);
-            stmt2.executeUpdate();
-            stmt2.close();
-
-            PreparedStatement stmt3 = conn.prepareStatement(
-                "DELETE FROM notifications WHERE type = 'payment' " +
-                "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
-            stmt3.setString(1, email);
-            stmt3.executeUpdate();
-            stmt3.close();
-
-            conn.close();
-        } catch (Exception e) { e.printStackTrace(); }
-    }
-
+    // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
     private void syncNotifications() {
-        cleanupNotifications();
         String email = SessionManager.getEmail();
-        if (email == null) return;
+        if (email == null) {
+            System.out.println("[Sync] No email in session");
+            return;
+        }
+        
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
 
+            // ✅ Get user ID from email
+            PreparedStatement getUserStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            getUserStmt.setString(1, email);
+            ResultSet userRs = getUserStmt.executeQuery();
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+            userRs.close();
+            getUserStmt.close();
+
+            System.out.println("[Sync] User ID for " + email + ": " + userId);
+
+            if (userId == -1) {
+                conn.close();
+                System.out.println("[Sync] User not found!");
+                return;
+            }
+
+            // ✅ Delete old notifications (cleanup)
+            PreparedStatement deleteOld = conn.prepareStatement(
+                "DELETE FROM notifications WHERE user_id = ? AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+            deleteOld.setInt(1, userId);
+            deleteOld.executeUpdate();
+            deleteOld.close();
+
+            // ✅ Sync pending payments
+            System.out.println("[Sync] Syncing pending payments...");
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+                "SELECT p.id, p.ref_number, r.full_name FROM payments p " +
+                "LEFT JOIN residents r ON p.resident_id = r.id " +
+                "WHERE p.status = 'Pending' AND p.archived = 0"
             ).executeQuery();
+            int paymentCount = 0;
             while (rs1.next()) {
                 String refNo = rs1.getString("ref_number");
-                String msg = "Pending payment from " +
-                    rs1.getString("resident_name") + " (" + refNo + ")";
-                insertIfNew(conn, "payment", msg, refNo, email);
+                String residentName = rs1.getString("full_name");
+                String paymentId = String.valueOf(rs1.getInt("id"));
+                String msg = "💳 Pending payment from " + (residentName != null ? residentName : "Unknown") + " (" + refNo + ")";
+                insertIfNew(conn, "payment", msg, paymentId, userId);
+                paymentCount++;
             }
             rs1.close();
+            System.out.println("[Sync] Found " + paymentCount + " pending payments");
 
+            // ✅ Sync open complaints
+            System.out.println("[Sync] Syncing open complaints...");
             ResultSet rs2 = conn.prepareStatement(
-                "SELECT complaint_id, complainant_name, incident_type " +
-                "FROM complaints WHERE status <> 'Resolved'"
+                "SELECT id, incident_type, complainant_name FROM complaints WHERE status <> 'Resolved'"
             ).executeQuery();
+            int complaintCount = 0;
             while (rs2.next()) {
-                String cid = rs2.getString("complaint_id");
-                String msg = "Open complaint: " + rs2.getString("incident_type") +
-                    " by " + rs2.getString("complainant_name");
-                insertIfNew(conn, "complaint", msg, cid, email);
+                String cid = String.valueOf(rs2.getInt("id"));
+                String incidentType = rs2.getString("incident_type");
+                String complainantName = rs2.getString("complainant_name");
+                String msg = "📢 Open complaint: " + incidentType + " by " + (complainantName != null ? complainantName : "Unknown");
+                insertIfNew(conn, "complaint", msg, cid, userId);
+                complaintCount++;
             }
             rs2.close();
+            System.out.println("[Sync] Found " + complaintCount + " open complaints");
 
+            // ✅ Sync recent announcements
+            System.out.println("[Sync] Syncing announcements...");
             ResultSet rs3 = conn.prepareStatement(
-                "SELECT announcement_id, title FROM announcements ORDER BY id DESC"
+                "SELECT id, title FROM announcements ORDER BY id DESC LIMIT 5"
             ).executeQuery();
-            int aCount = 0;
-            while (rs3.next() && aCount < 5) {
-                String aid = rs3.getString("announcement_id");
-                String msg = "Announcement posted: " + rs3.getString("title");
-                insertIfNew(conn, "announcement", msg, aid, email);
-                aCount++;
+            int announcementCount = 0;
+            while (rs3.next()) {
+                String aid = String.valueOf(rs3.getInt("id"));
+                String title = rs3.getString("title");
+                String msg = "📣 Announcement: " + title;
+                insertIfNew(conn, "announcement", msg, aid, userId);
+                announcementCount++;
             }
             rs3.close();
+            System.out.println("[Sync] Found " + announcementCount + " announcements");
+
             conn.close();
-        } catch (Exception e) { e.printStackTrace(); }
+            System.out.println("[Sync] Notification sync complete!");
+        } catch (Exception e) {
+            System.out.println("[Sync] Error: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void insertIfNew(Connection conn, String type,
-                              String message, String refId,
-                              String email) throws Exception {
+                              String message, String refId, int userId) throws Exception {
         PreparedStatement check = conn.prepareStatement(
-            "SELECT notif_id FROM notifications " +
-            "WHERE reference_id = ? AND user_email = ? AND type = ?");
+            "SELECT id FROM notifications WHERE reference_id = ? AND user_id = ? AND type = ?");
         check.setString(1, refId);
-        check.setString(2, email);
+        check.setInt(2, userId);
         check.setString(3, type);
         ResultSet rs = check.executeQuery();
         boolean exists = rs.next();
-        rs.close(); check.close();
+        rs.close(); 
+        check.close();
 
         if (!exists) {
             PreparedStatement ins = conn.prepareStatement(
-                "INSERT INTO notifications " +
-                "(type, message, reference_id, is_read, created_at, user_email) " +
-                "VALUES (?, ?, ?, 'false', ?, ?)");
+                "INSERT INTO notifications (type, message, reference_id, is_read, created_at, user_id) " +
+                "VALUES (?, ?, ?, 0, ?, ?)");
             ins.setString(1, type);
             ins.setString(2, message);
             ins.setString(3, refId);
             ins.setString(4, LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            ins.setString(5, email);
+            ins.setInt(5, userId);
             ins.executeUpdate();
             ins.close();
+            System.out.println("[Notif] New: " + type + " - " + refId + " - " + message);
+        } else {
+            System.out.println("[Notif] Already exists: " + type + " - " + refId);
         }
     }
 
@@ -442,8 +422,10 @@ private void styleTableDarkMode(TableView<String[]> table) {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' WHERE notif_id = " + notifId);
-            stmt.executeUpdate();
+                "UPDATE notifications SET is_read = 1 WHERE id = ?");
+            stmt.setInt(1, Integer.parseInt(notifId));
+            int updated = stmt.executeUpdate();
+            System.out.println("[Read] notif_id=" + notifId + " updated=" + updated);
             stmt.close();
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
@@ -455,13 +437,28 @@ private void styleTableDarkMode(TableView<String[]> table) {
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
+            
+            // ✅ Get user ID first
+            PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            userStmt.setString(1, email);
+            ResultSet userRs = userStmt.executeQuery();
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+            userRs.close();
+            userStmt.close();
+            
+            if (userId == -1) {
+                conn.close();
+                return;
+            }
+            
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
-            stmt.setString(1, email);
+                "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+            stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
             rs.close(); stmt.close(); conn.close();
+            System.out.println("[Badge] Unread count for user " + userId + " = " + count);
             if (count > 0) {
                 alertBadge.setText(count > 99 ? "99+" : String.valueOf(count));
                 alertBadge.setVisible(true);
@@ -506,7 +503,7 @@ private void styleTableDarkMode(TableView<String[]> table) {
             "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
             "-fx-font-size: 11px; -fx-font-weight: bold;" +
             "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
-        Button pastBtn = new Button("Past Notifications");
+        Button pastBtn = new Button("All Notifications");
         pastBtn.setStyle(
             "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
             "-fx-font-size: 11px; -fx-background-radius: 20;" +
@@ -532,34 +529,63 @@ private void styleTableDarkMode(TableView<String[]> table) {
         Runnable loadNotifs = () -> {
             notifBody.getChildren().clear();
             String email = SessionManager.getEmail();
-            if (email == null) return;
+            if (email == null) {
+                System.out.println("[Notif Load] No email");
+                return;
+            }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
+                
+                // ✅ Get user ID
+                PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                userStmt.setString(1, email);
+                ResultSet userRs = userStmt.executeQuery();
+                int userId = -1;
+                if (userRs.next()) userId = userRs.getInt("id");
+                userRs.close();
+                userStmt.close();
+
+                System.out.println("[Notif Load] User ID: " + userId);
+
+                if (userId == -1) {
+                    conn.close();
+                    VBox empty = new VBox(8);
+                    empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
+                    Label emptyLbl = new Label("User not found");
+                    emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
+                    empty.getChildren().add(emptyLbl);
+                    notifBody.getChildren().add(empty);
+                    return;
+                }
+
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT id, type, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY id DESC"
+                    : "SELECT id, type, message, is_read, created_at FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY id DESC";
+                
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
-                        rs.getString("notif_id"),
+                        rs.getString("id"),
                         rs.getString("type"),
                         rs.getString("message"),
-                        rs.getString("is_read"),
+                        String.valueOf(rs.getInt("is_read")),
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
+
+                System.out.println("[Notif Load] Found " + items.size() + " notifications");
 
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
                     empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
                     Label emptyLbl = new Label(
                         showingPast[0]
-                            ? "No past notifications."
+                            ? "No notifications yet"
                             : "You're all caught up! 🎉");
                     emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
                     empty.getChildren().add(emptyLbl);
@@ -570,7 +596,10 @@ private void styleTableDarkMode(TableView<String[]> table) {
                             buildNotifItem(item, loadNotifsRef,
                                 showingPast, alertStage));
                 }
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                System.out.println("[Notif Load] Error: " + e.getMessage());
+                e.printStackTrace();
+            }
         };
 
         loadNotifsRef[0] = loadNotifs;
@@ -648,7 +677,7 @@ private void styleTableDarkMode(TableView<String[]> table) {
         row.setStyle(
             "-fx-padding: 16 24;" +
             "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
-            ("false".equals(isRead)
+            ("0".equals(isRead)
                 ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
                 : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
         row.setAlignment(Pos.CENTER_LEFT);
@@ -667,13 +696,13 @@ private void styleTableDarkMode(TableView<String[]> table) {
         Label msgLbl = new Label(message);
         msgLbl.setStyle(
             "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
-            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+            ("0".equals(isRead) ? " -fx-font-weight: bold;" : ""));
         msgLbl.setWrapText(true);
         Label dateLbl = new Label(dateStr != null ? dateStr : "");
         dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
         textBox.getChildren().addAll(msgLbl, dateLbl);
 
-        if ("false".equals(isRead)) {
+        if ("0".equals(isRead)) {
             Circle dot = new Circle(4);
             dot.setStyle("-fx-fill: #1565c0;");
             row.getChildren().addAll(iconBox, textBox, dot);
@@ -757,7 +786,7 @@ private void styleTableDarkMode(TableView<String[]> table) {
             "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
             "-fx-alignment: CENTER_LEFT;");
         goToBtn.setOnAction(e -> {
-            if ("false".equals(isRead)) markOneAsRead(notifId);
+            if ("0".equals(isRead)) markOneAsRead(notifId);
             detail.close();
             alertStage.close();
             Stage stage = (Stage) logoutButton.getScene().getWindow();
@@ -784,7 +813,7 @@ private void styleTableDarkMode(TableView<String[]> table) {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
-        if ("true".equals(isRead)) {
+        if ("1".equals(isRead)) {
             footer.getChildren().add(cancelBtn);
         } else {
             markBtn.setOnAction(e -> {
@@ -834,338 +863,417 @@ private void styleTableDarkMode(TableView<String[]> table) {
         Platform.runLater(this::applyDarkModeToCurrentTab);
     }
     
-// ── USERS TAB ─────────────────────────────────────────────────────────────────
-private Node buildUsersTab() {
-    VBox container = new VBox(20);
-    container.setMaxWidth(Double.MAX_VALUE);
-    container.setStyle(
-        "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
-        "-fx-border-color: #e8e8e8; -fx-border-width: 1; -fx-padding: 28;");
+    // ── USERS TAB ─────────────────────────────────────────────────────────────────
+    private Node buildUsersTab() {
+        VBox container = new VBox(20);
+        container.setMaxWidth(Double.MAX_VALUE);
+        container.setStyle(
+            "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
+            "-fx-border-color: #e8e8e8; -fx-border-width: 1; -fx-padding: 28;");
 
-    // Mini summary cards
-    int[] counts = getUserCounts();
-    HBox cards = new HBox(14);
-    cards.setMaxWidth(Double.MAX_VALUE);
-    
-    String totalUsersBg = ThemeManager.isDarkMode ? "#CCCCCC" : "#1a1a1a";
-    
-    cards.getChildren().addAll(
-        buildMiniCard("Total Users", String.valueOf(counts[0]), totalUsersBg, "#ffffff", "👥"),
-        buildMiniCard("Active",      String.valueOf(counts[1]), "#e8f5e9", "#2e7d32", "✅"),
-        buildMiniCard("Inactive",    String.valueOf(counts[2]), "#ffebee", "#c62828", "🚫"),
-        buildMiniCard("Admins",      String.valueOf(counts[3]), "#e3f2fd", "#1565c0", "⚙️")
-    );
+        // Mini summary cards
+        int[] counts = getUserCounts();
+        HBox cards = new HBox(14);
+        cards.setMaxWidth(Double.MAX_VALUE);
+        
+        String totalUsersBg = ThemeManager.isDarkMode ? "#CCCCCC" : "#1a1a1a";
+        
+        cards.getChildren().addAll(
+            buildMiniCard("Total Users", String.valueOf(counts[0]), totalUsersBg, "#ffffff", "👥"),
+            buildMiniCard("Active",      String.valueOf(counts[1]), "#e8f5e9", "#2e7d32", "✅"),
+            buildMiniCard("Inactive",    String.valueOf(counts[2]), "#ffebee", "#c62828", "🚫"),
+            buildMiniCard("Admins",      String.valueOf(counts[3]), "#e3f2fd", "#1565c0", "⚙️")
+        );
 
-    // Header row
-    HBox header = new HBox(10);
-    header.setStyle("-fx-alignment: CENTER_LEFT;");
-    VBox titleBox = new VBox(4);
-    HBox.setHgrow(titleBox, Priority.ALWAYS);
-    Label title = new Label("User Accounts");
-    title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
-    Label subtitle = new Label("Manage roles, status and accounts");
-    subtitle.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
-    titleBox.getChildren().addAll(title, subtitle);
+        // Header row
+        HBox header = new HBox(10);
+        header.setStyle("-fx-alignment: CENTER_LEFT;");
+        VBox titleBox = new VBox(4);
+        HBox.setHgrow(titleBox, Priority.ALWAYS);
+        Label title = new Label("User Accounts");
+        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
+        Label subtitle = new Label("Manage roles, status and accounts");
+        subtitle.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        titleBox.getChildren().addAll(title, subtitle);
 
-    TextField searchField = new TextField();
-    searchField.setPromptText("Search by name or email...");
-    searchField.setPrefWidth(240);
-    searchField.setStyle(
-        "-fx-font-size: 12px; -fx-padding: 9 14; -fx-background-radius: 8;" +
-        "-fx-border-color: #e8e8e8; -fx-border-width: 1; -fx-border-radius: 8;" +
-        "-fx-background-color: #f8f9fa;");
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search by name or email...");
+        searchField.setPrefWidth(240);
+        searchField.setStyle(
+            "-fx-font-size: 12px; -fx-padding: 9 14; -fx-background-radius: 8;" +
+            "-fx-border-color: #e8e8e8; -fx-border-width: 1; -fx-border-radius: 8;" +
+            "-fx-background-color: #f8f9fa;");
 
-    Button exportBtn = new Button("Export CSV");
-    exportBtn.setStyle(
-        "-fx-background-color: #ffffff; -fx-text-fill: #555555;" +
-        "-fx-font-size: 12px; -fx-background-radius: 8;" +
-        "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
-        "-fx-padding: 9 16; -fx-cursor: hand;");
+        Button exportBtn = new Button("Export CSV");
+        exportBtn.setStyle(
+            "-fx-background-color: #ffffff; -fx-text-fill: #555555;" +
+            "-fx-font-size: 12px; -fx-background-radius: 8;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+            "-fx-padding: 9 16; -fx-cursor: hand;");
 
-    Label countLabel = new Label();
-    countLabel.setStyle(
-        "-fx-font-size: 11px; -fx-text-fill: #888888;" +
-        "-fx-background-color: #f4f4f4; -fx-background-radius: 20; -fx-padding: 5 14;");
-    header.getChildren().addAll(titleBox, searchField, exportBtn, countLabel);
+        Label countLabel = new Label();
+        countLabel.setStyle(
+            "-fx-font-size: 11px; -fx-text-fill: #888888;" +
+            "-fx-background-color: #f4f4f4; -fx-background-radius: 20; -fx-padding: 5 14;");
+        header.getChildren().addAll(titleBox, searchField, exportBtn, countLabel);
 
-    // Table
-    TableView<String[]> table = new TableView<>();
-    table.setMaxWidth(Double.MAX_VALUE);
-    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-    table.setStyle(
-        "-fx-background-color: transparent; -fx-border-color: #f0f0f0;" +
-        "-fx-border-width: 1; -fx-border-radius: 10;" +
-        "-fx-table-cell-border-color: #f8f8f8;");
-    table.setPrefHeight(400);
-    
-    table.setRowFactory(tv -> new TableRow<String[]>() {
-        @Override
-        protected void updateItem(String[] item, boolean empty) {
-            super.updateItem(item, empty);
-            if (ThemeManager.isDarkMode) {
-                setStyle(empty || item == null
-                    ? "-fx-background-color: transparent;"
-                    : getIndex() % 2 == 0
-                        ? "-fx-background-color: #1a1a1a; -fx-pref-height: 54px;"
-                        : "-fx-background-color: #242424; -fx-pref-height: 54px;");
-            } else {
-                setStyle(empty || item == null
-                    ? "-fx-background-color: transparent;"
-                    : getIndex() % 2 == 0
-                        ? "-fx-background-color: #ffffff; -fx-pref-height: 54px;"
-                        : "-fx-background-color: #fafbfc; -fx-pref-height: 54px;");
-            }
-        }
-    });
-
-    TableColumn<String[], String> colId = new TableColumn<>("ID");
-    colId.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
-    colId.setPrefWidth(40);
-    colId.setMinWidth(40);
-    colId.setMaxWidth(40);
-    colId.setCellFactory(col -> new TableCell<String[], String>() {
-        @Override
-        protected void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-            setText(empty ? null : item);
-            if (ThemeManager.isDarkMode) {
-                setStyle("-fx-text-fill: white;");
-            } else {
-                setStyle("");
-            }
-        }
-    });
-
-    TableColumn<String[], String> colName = new TableColumn<>("Full Name");
-    colName.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
-    colName.setPrefWidth(130);
-    colName.setCellFactory(col -> new TableCell<String[], String>() {
-        @Override
-        protected void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-            setText(empty ? null : item);
-            if (ThemeManager.isDarkMode) {
-                setStyle("-fx-text-fill: white;");
-            } else {
-                setStyle("");
-            }
-        }
-    });
-
-    TableColumn<String[], String> colEmail = new TableColumn<>("Email");
-    colEmail.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
-    colEmail.setPrefWidth(190);
-    colEmail.setCellFactory(col -> new TableCell<String[], String>() {
-        @Override
-        protected void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-            setText(empty ? null : item);
-            if (ThemeManager.isDarkMode) {
-                setStyle("-fx-text-fill: white;");
-            } else {
-                setStyle("");
-            }
-        }
-    });
-
-    TableColumn<String[], String> colRole = new TableColumn<>("Role");
-    colRole.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
-    colRole.setPrefWidth(120);
-    colRole.setCellFactory(col -> new TableCell<String[], String>() {
-        @Override
-        protected void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-            if (empty || item == null) { setText(null); setGraphic(null); return; }
-            Label badge = new Label(item);
-            String bg, fg;
-            if (item.equalsIgnoreCase("admin")) {
-                bg = "#1a1a1a"; fg = "#ffffff";
-            } else if (item.equalsIgnoreCase("barangay_captain")) {
-                bg = "#e8f5e9"; fg = "#2e7d32";
-            } else if (item.equalsIgnoreCase("secretary")) {
-                bg = "#fff8e1"; fg = "#f57f17";
-            } else if (item.equalsIgnoreCase("treasurer")) {
-                bg = "#fce4ec"; fg = "#c62828";
-            } else {
-                bg = "#f4f4f4"; fg = "#555555";
-            }
-            badge.setStyle(
-                "-fx-background-color: " + bg + "; -fx-text-fill: " + fg + ";" +
-                "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                "-fx-background-radius: 20; -fx-padding: 4 12;");
-            setGraphic(badge);
-            setText(null);
-        }
-    });
-
-    TableColumn<String[], String> colStatus = new TableColumn<>("Status");
-    colStatus.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[4]));
-    colStatus.setPrefWidth(90);
-    colStatus.setCellFactory(col -> new TableCell<String[], String>() {
-        @Override
-        protected void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-            if (empty || item == null) { setText(null); setGraphic(null); return; }
-            Label badge = new Label(item);
-            badge.setStyle(item.equals("Active")
-                ? "-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;" +
-                  "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                  "-fx-background-radius: 20; -fx-padding: 4 12;"
-                : "-fx-background-color: #ffebee; -fx-text-fill: #c62828;" +
-                  "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                  "-fx-background-radius: 20; -fx-padding: 4 12;");
-            setGraphic(badge);
-            setText(null);
-        }
-    });
-
-    TableColumn<String[], String> colActions = new TableColumn<>("Actions");
-    colActions.setPrefWidth(280);
-    colActions.setCellFactory(col -> new TableCell<String[], String>() {
-        final Button roleBtn   = new Button("Role");
-        final Button toggleBtn = new Button("Toggle");
-        final Button resetBtn  = new Button("Reset");
-        final Button deleteBtn = new Button("Delete");
-        final HBox   box       = new HBox(5, roleBtn, toggleBtn, resetBtn, deleteBtn);
-        {
-            box.setStyle("-fx-alignment: CENTER_LEFT; -fx-padding: 0 0 0 4;");
-
-            String btnBase =
-                "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                "-fx-background-radius: 6; -fx-border-width: 1;" +
-                "-fx-padding: 5 10; -fx-cursor: hand;";
-
-            roleBtn.setStyle(btnBase +
-                "-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0;" +
-                "-fx-border-color: #bbdefb;");
-            toggleBtn.setStyle(btnBase +
-                "-fx-background-color: #fff8e1; -fx-text-fill: #f57f17;" +
-                "-fx-border-color: #ffe082;");
-            resetBtn.setStyle(btnBase +
-                "-fx-background-color: #f4f4f4; -fx-text-fill: #444444;" +
-                "-fx-border-color: #e0e0e0;");
-            deleteBtn.setStyle(btnBase +
-                "-fx-background-color: #ffebee; -fx-text-fill: #c62828;" +
-                "-fx-border-color: #ffcdd2;");
-
-            roleBtn.setOnAction(e -> {
-                String[] row = getTableView().getItems().get(getIndex());
-                openChangeRoleModal(row[0], row[1], row[2], row[3], table, countLabel);
-            });
-            toggleBtn.setOnAction(e -> {
-                String[] row = getTableView().getItems().get(getIndex());
-                toggleUserStatus(row[0], row[4], table, countLabel);
-            });
-            resetBtn.setOnAction(e -> {
-                String[] row = getTableView().getItems().get(getIndex());
-                resetPassword(row[0], row[2]);
-            });
-            deleteBtn.setOnAction(e -> {
-                String[] row = getTableView().getItems().get(getIndex());
-                deleteUser(row[0], row[2], table, countLabel);
-            });
-        }
-        @Override
-        protected void updateItem(String item, boolean empty) {
-            super.updateItem(item, empty);
-            setGraphic(empty ? null : box);
-        }
-    });
-
-    table.getColumns().addAll(colId, colName, colEmail, colRole, colStatus, colActions);
-
-    Platform.runLater(() -> {
+        // Table
+        TableView<String[]> table = new TableView<>();
+        table.setMaxWidth(Double.MAX_VALUE);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-    });
-    
-    new Thread(() -> {
-        try {
-            Thread.sleep(200);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        Platform.runLater(() -> {
-            if (ThemeManager.isDarkMode) {
-                table.lookupAll(".column-header").forEach(hdr -> {
-                    hdr.setStyle(
-                        "-fx-background-color: #2a2a2a; " +
-                        "-fx-text-fill: #ffffff;");
-                });
-
-                table.lookupAll(".column-header-background").forEach(hdr -> {
-                    hdr.setStyle("-fx-background-color: #2a2a2a;");
-                });
+        table.setStyle(
+            "-fx-background-color: transparent; -fx-border-color: #f0f0f0;" +
+            "-fx-border-width: 1; -fx-border-radius: 10;" +
+            "-fx-table-cell-border-color: #f8f8f8;");
+        table.setPrefHeight(400);
+        
+        table.setRowFactory(tv -> new TableRow<String[]>() {
+            @Override
+            protected void updateItem(String[] item, boolean empty) {
+                super.updateItem(item, empty);
+                if (ThemeManager.isDarkMode) {
+                    setStyle(empty || item == null
+                        ? "-fx-background-color: transparent;"
+                        : getIndex() % 2 == 0
+                            ? "-fx-background-color: #1a1a1a; -fx-pref-height: 54px;"
+                            : "-fx-background-color: #242424; -fx-pref-height: 54px;");
+                } else {
+                    setStyle(empty || item == null
+                        ? "-fx-background-color: transparent;"
+                        : getIndex() % 2 == 0
+                            ? "-fx-background-color: #ffffff; -fx-pref-height: 54px;"
+                            : "-fx-background-color: #fafbfc; -fx-pref-height: 54px;");
+                }
             }
         });
-    }).start();
 
-    loadUsers(table, countLabel, "");
-    searchField.setOnKeyReleased(e ->
-        loadUsers(table, countLabel, searchField.getText().trim()));
-    exportBtn.setOnAction(e -> exportUsersCSV(table));
+        TableColumn<String[], String> colId = new TableColumn<>("ID");
+        colId.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
+        colId.setPrefWidth(40);
+        colId.setMinWidth(40);
+        colId.setMaxWidth(40);
+        colId.setCellFactory(col -> new TableCell<String[], String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : item);
+                if (ThemeManager.isDarkMode) {
+                    setStyle("-fx-text-fill: white;");
+                } else {
+                    setStyle("");
+                }
+            }
+        });
 
-    container.getChildren().addAll(cards, header, table);
-    return container;
-}
+        TableColumn<String[], String> colName = new TableColumn<>("Full Name");
+        colName.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
+        colName.setPrefWidth(130);
+        colName.setCellFactory(col -> new TableCell<String[], String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : item);
+                if (ThemeManager.isDarkMode) {
+                    setStyle("-fx-text-fill: white;");
+                } else {
+                    setStyle("");
+                }
+            }
+        });
 
-private int[] getUserCounts() {
-    int total = 0, active = 0, inactive = 0, admins = 0;
-    try {
-        Connection conn = DatabaseConnection.getConnection();
-        ResultSet rs = conn.prepareStatement(
-            "SELECT status, role FROM users").executeQuery();
-        while (rs.next()) {
-            total++;
-            String s = rs.getString("status");
-            String r = rs.getString("role");
-            if ("Active".equalsIgnoreCase(s)) active++; else inactive++;
-            if ("admin".equalsIgnoreCase(r))  admins++;
-        }
-        rs.close();
-        conn.close();
-    } catch (Exception e) { e.printStackTrace(); }
-    return new int[]{total, active, inactive, admins};
-}
+        TableColumn<String[], String> colEmail = new TableColumn<>("Email");
+        colEmail.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
+        colEmail.setPrefWidth(190);
+        colEmail.setCellFactory(col -> new TableCell<String[], String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : item);
+                if (ThemeManager.isDarkMode) {
+                    setStyle("-fx-text-fill: white;");
+                } else {
+                    setStyle("");
+                }
+            }
+        });
 
-private void loadUsers(TableView<String[]> table, Label countLabel, String search) {
-    List<String[]> rows = new ArrayList<>();
-    try {
-        Connection conn = DatabaseConnection.getConnection();
-        ResultSet rs = conn.prepareStatement(
-            "SELECT id, full_name, email, role, status FROM users ORDER BY id DESC"
-        ).executeQuery();
-        while (rs.next()) {
-            String name   = rs.getString("full_name") != null ? rs.getString("full_name") : "—";
-            String email  = rs.getString("email")     != null ? rs.getString("email")     : "—";
-            String role   = rs.getString("role")      != null ? rs.getString("role")      : "resident";
-            String status = rs.getString("status")    != null ? rs.getString("status")    : "Active";
-            String id     = String.valueOf(rs.getInt("id"));
-            if (!search.isEmpty()
-                && !name.toLowerCase().contains(search.toLowerCase())
-                && !email.toLowerCase().contains(search.toLowerCase())) continue;
-            rows.add(new String[]{id, name, email, role, status});
-        }
-        rs.close();
-        conn.close();
-    } catch (Exception e) { e.printStackTrace(); }
-    table.setItems(FXCollections.observableArrayList(rows));
-    countLabel.setText(rows.size() + " user" + (rows.size() != 1 ? "s" : ""));
-}
+        TableColumn<String[], String> colRole = new TableColumn<>("Role");
+        colRole.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
+        colRole.setPrefWidth(140);
+        colRole.setCellFactory(col -> new TableCell<String[], String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setText(null); setGraphic(null); return; }
+                Label badge = new Label(item);
+                String bg, fg;
+                
+                // ✅ UNIQUE COLORS FOR EACH ROLE
+                switch(item.toLowerCase()) {
+                    case "admin":
+                        bg = "#1a1a1a"; fg = "#ffffff";
+                        break;
+                    case "barangay_captain":
+                        bg = "#e8f5e9"; fg = "#1b5e20";
+                        break;
+                    case "kagawad":
+                        bg = "#e3f2fd"; fg = "#0d47a1";
+                        break;
+                    case "secretary":
+                        bg = "#fff3e0"; fg = "#e65100";
+                        break;
+                    case "treasurer":
+                        bg = "#fce4ec"; fg = "#880e4f";
+                        break;
+                    case "resident":
+                        bg = "#f3e5f5"; fg = "#4a148c";
+                        break;
+                    default:
+                        bg = "#f4f4f4"; fg = "#555555";
+                }
+                
+                badge.setStyle(
+                    "-fx-background-color: " + bg + "; -fx-text-fill: " + fg + ";" +
+                    "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                    "-fx-background-radius: 20; -fx-padding: 6 14;");
+                setGraphic(badge);
+                setText(null);
+            }
+        });
+        TableColumn<String[], String> colStatus = new TableColumn<>("Status");
+        colStatus.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[4]));
+        colStatus.setPrefWidth(100);
+        colStatus.setCellFactory(col -> new TableCell<String[], String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
 
-private void exportUsersCSV(TableView<String[]> table) {
-    try {
-        String fileName = "users_export_" + LocalDate.now() + ".csv";
-        FileWriter writer = new FileWriter(fileName);
-        writer.write("ID,Full Name,Email,Role,Status\n");
-        for (String[] row : table.getItems())
-            writer.write(String.join(",", row[0], row[1], row[2], row[3], row[4]) + "\n");
-        writer.close();
-        showInfo("✅  Exported successfully!\nSaved as: " + fileName);
-    } catch (Exception e) {
-        e.printStackTrace();
-        showInfo("Export failed. Please try again.");
+                // ✅ FIXED: Don't show anything for empty cells
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+
+                String trimmedItem = item.trim();
+
+                // ✅ FIXED: Only show badge if item is not empty
+                if (trimmedItem.isEmpty()) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+
+                Label badge = new Label(trimmedItem);
+
+                if (trimmedItem.equalsIgnoreCase("Active")) {
+                    badge.setStyle(
+                        "-fx-background-color: #e8f5e9; -fx-text-fill: #1b5e20;" +
+                        "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                        "-fx-background-radius: 20; -fx-padding: 6 14;");
+                } else if (trimmedItem.equalsIgnoreCase("Inactive")) {
+                    badge.setStyle(
+                        "-fx-background-color: #ffebee; -fx-text-fill: #b71c1c;" +
+                        "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                        "-fx-background-radius: 20; -fx-padding: 6 14;");
+                } else {
+                    badge.setStyle(
+                        "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                        "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                        "-fx-background-radius: 20; -fx-padding: 6 14;");
+                }
+
+                setGraphic(badge);
+                setText(null);
+            }
+        });
+
+        TableColumn<String[], String> colActions = new TableColumn<>("Actions");
+        colActions.setPrefWidth(350);
+        colActions.setCellFactory(col -> new TableCell<String[], String>() {
+            final Button roleBtn   = new Button("Role");
+            final Button statusBtn = new Button("Status");
+            final Button resetBtn  = new Button("Reset");
+            final Button deleteBtn = new Button("Delete");
+            final HBox   box       = new HBox(5, roleBtn, statusBtn, resetBtn, deleteBtn);
+            {
+                box.setStyle("-fx-alignment: CENTER_LEFT; -fx-padding: 0 0 0 4;");
+
+                String btnBase =
+                    "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                    "-fx-background-radius: 6; -fx-border-width: 1;" +
+                    "-fx-padding: 5 10; -fx-cursor: hand;";
+
+                roleBtn.setStyle(btnBase +
+                    "-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0;" +
+                    "-fx-border-color: #bbdefb;");
+                statusBtn.setStyle(btnBase +
+                    "-fx-background-color: #fff8e1; -fx-text-fill: #f57f17;" +
+                    "-fx-border-color: #ffe082;");
+                resetBtn.setStyle(btnBase +
+                    "-fx-background-color: #f4f4f4; -fx-text-fill: #444444;" +
+                    "-fx-border-color: #e0e0e0;");
+                deleteBtn.setStyle(btnBase +
+                    "-fx-background-color: #ffebee; -fx-text-fill: #c62828;" +
+                    "-fx-border-color: #ffcdd2;");
+
+                roleBtn.setOnAction(e -> {
+                    String[] row = getTableView().getItems().get(getIndex());
+                    openChangeRoleModal(row[0], row[1], row[2], row[3], table, countLabel);
+                });
+                
+                statusBtn.setOnAction(e -> {
+                    String[] row = getTableView().getItems().get(getIndex());
+                    toggleUserStatus(row[0], row[4], table, countLabel);
+                });
+                
+                resetBtn.setOnAction(e -> {
+                    String[] row = getTableView().getItems().get(getIndex());
+                    resetPassword(row[0], row[2]);
+                });
+                deleteBtn.setOnAction(e -> {
+                    String[] row = getTableView().getItems().get(getIndex());
+                    deleteUser(row[0], row[2], table, countLabel);
+                });
+            }
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : box);
+            }
+        });
+
+        table.getColumns().addAll(colId, colName, colEmail, colRole, colStatus, colActions);
+
+        Platform.runLater(() -> {
+            table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        });
+        
+        new Thread(() -> {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            Platform.runLater(() -> {
+                if (ThemeManager.isDarkMode) {
+                    table.lookupAll(".column-header").forEach(hdr -> {
+                        hdr.setStyle(
+                            "-fx-background-color: #2a2a2a; " +
+                            "-fx-text-fill: #ffffff;");
+                    });
+
+                    table.lookupAll(".column-header-background").forEach(hdr -> {
+                        hdr.setStyle("-fx-background-color: #2a2a2a;");
+                    });
+                }
+            });
+        }).start();
+
+        loadUsers(table, countLabel, "");
+        searchField.setOnKeyReleased(e ->
+            loadUsers(table, countLabel, searchField.getText().trim()));
+        exportBtn.setOnAction(e -> exportUsersCSV(table));
+
+        container.getChildren().addAll(cards, header, table);
+        return container;
     }
-}
+
+    // ✅ FIXED: Correctly count Active and Inactive users
+    private int[] getUserCounts() {
+        int total = 0, active = 0, inactive = 0, admins = 0;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            ResultSet rs = conn.prepareStatement(
+                "SELECT COALESCE(status, 'Active') as status, role FROM users"
+            ).executeQuery();
+            while (rs.next()) {
+                total++;
+                String s = rs.getString("status");
+                String r = rs.getString("role");
+                
+                // ✅ Properly count Active vs Inactive
+                if (s != null && s.trim().equalsIgnoreCase("Inactive")) {
+                    inactive++;
+                } else {
+                    active++;
+                }
+                
+                if (r != null && r.equalsIgnoreCase("admin")) {
+                    admins++;
+                }
+            }
+            rs.close();
+            conn.close();
+            
+            System.out.println("[Stats] Total: " + total + " | Active: " + active + " | Inactive: " + inactive + " | Admins: " + admins);
+        } catch (Exception e) { 
+            System.out.println("[Stats] Error: " + e.getMessage());
+            e.printStackTrace(); 
+        }
+        return new int[]{total, active, inactive, admins};
+    }
+
+    private void loadUsers(TableView<String[]> table, Label countLabel, String search) {
+        List<String[]> rows = new ArrayList<>();
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            String sql = "SELECT id, full_name, email, role, COALESCE(status, 'Active') as status FROM users WHERE 1=1";
+
+            if (!search.isEmpty()) {
+                sql += " AND (full_name LIKE '%" + search + "%' OR email LIKE '%" + search + "%')";
+            }
+
+            sql += " ORDER BY id DESC";
+
+            System.out.println("[Users] Loading with query: " + sql);
+
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery();
+
+            int count = 0;
+            while (rs.next()) {
+                String id     = String.valueOf(rs.getInt("id"));
+                String name   = rs.getString("full_name") != null ? rs.getString("full_name") : "—";
+                String email  = rs.getString("email") != null ? rs.getString("email") : "—";
+                String role   = rs.getString("role") != null ? rs.getString("role") : "resident";
+                String status = rs.getString("status") != null ? rs.getString("status").trim() : "Active";
+
+                rows.add(new String[]{id, name, email, role, status});
+                count++;
+                System.out.println("[Users] Row " + count + ": ID=" + id + " | Name=" + name + " | Status=" + status);
+            }
+            rs.close();
+            pstmt.close();
+            conn.close();
+
+            System.out.println("[Users] Total rows loaded: " + count);
+        } catch (Exception e) { 
+            System.out.println("[Users] Error: " + e.getMessage());
+            e.printStackTrace(); 
+        }
+
+        // ✅ Clear and refresh table
+        table.getItems().clear();
+        table.setItems(FXCollections.observableArrayList(rows));
+        countLabel.setText(rows.size() + " user" + (rows.size() != 1 ? "s" : ""));
+
+        System.out.println("[Users] Table displayed with " + rows.size() + " records");
+    }
+    private void exportUsersCSV(TableView<String[]> table) {
+        try {
+            String fileName = "users_export_" + LocalDate.now() + ".csv";
+            FileWriter writer = new FileWriter(fileName);
+            writer.write("ID,Full Name,Email,Role,Status\n");
+            for (String[] row : table.getItems())
+                writer.write(String.join(",", row[0], row[1], row[2], row[3], row[4]) + "\n");
+            writer.close();
+            showInfo("✅  Exported successfully!\nSaved as: " + fileName);
+        } catch (Exception e) {
+            e.printStackTrace();
+            showInfo("Export failed. Please try again.");
+        }
+    }
 
     private void openChangeRoleModal(String id, String name, String email,
                                       String currentRole,
@@ -1205,7 +1313,7 @@ private void exportUsersCSV(TableView<String[]> table) {
         roleLbl.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;");
         ComboBox<String> roleBox = new ComboBox<>();
         roleBox.getItems().addAll(
-            "admin", "barangay_captain", "secretary", "treasurer", "resident");
+            "admin", "barangay_captain", "kagawad", "secretary", "treasurer", "resident");
         roleBox.setValue(currentRole);
         roleBox.setMaxWidth(Double.MAX_VALUE);
         roleBox.setStyle(
@@ -1262,33 +1370,74 @@ private void exportUsersCSV(TableView<String[]> table) {
         modal.showAndWait();
     }
 
-    private void toggleUserStatus(String id, String currentStatus,
-                                   TableView<String[]> table, Label countLabel) {
-        String newStatus = currentStatus.equals("Active") ? "Inactive" : "Active";
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Toggle Status");
-        confirm.setHeaderText("Set user to " + newStatus + "?");
-        confirm.setContentText("This will " +
-            (newStatus.equals("Active") ? "reactivate" : "deactivate") +
-            " this account.");
-        confirm.showAndWait().ifPresent(r -> {
-            if (r == ButtonType.OK) {
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE users SET status = ? WHERE id = ?");
-                    stmt.setString(1, newStatus);
-                    stmt.setInt(2, Integer.parseInt(id));
-                    stmt.executeUpdate();
-                    stmt.close();
-                    logAction("Set user ID " + id + " status to " + newStatus);
-                    conn.close();
-                    loadUsers(table, countLabel, "");
-                } catch (Exception e) { e.printStackTrace(); }
-            }
-        });
+private void toggleUserStatus(String id, String currentStatus,
+                               TableView<String[]> table, Label countLabel) {
+    // ✅ Handle NULL or empty status - default to Active
+    String statusValue = currentStatus;
+    if (statusValue == null || statusValue.trim().isEmpty()) {
+        statusValue = "Active";
     }
-
+    
+    statusValue = statusValue.trim();
+    
+    // ✅ Create FINAL variables for lambda
+    final String finalCurrentStatus = statusValue;
+    final String finalNewStatus = statusValue.equalsIgnoreCase("Active") ? "Inactive" : "Active";
+    final String finalId = id;
+    
+    System.out.println("[Toggle] User ID: " + finalId + " | Current: " + finalCurrentStatus + " | New: " + finalNewStatus);
+    
+    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+    confirm.setTitle("Toggle Status");
+    confirm.setHeaderText("Set user to " + finalNewStatus + "?");
+    confirm.setContentText("User ID " + finalId + " will be set to: " + finalNewStatus);
+    
+    confirm.showAndWait().ifPresent(r -> {
+        if (r == ButtonType.OK) {
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                
+                // ✅ Update database
+                String updateSQL = "UPDATE users SET status = ? WHERE id = ?";
+                PreparedStatement stmt = conn.prepareStatement(updateSQL);
+                stmt.setString(1, finalNewStatus);
+                stmt.setInt(2, Integer.parseInt(finalId));
+                
+                int rowsUpdated = stmt.executeUpdate();
+                System.out.println("[Toggle] SQL executed. Rows updated: " + rowsUpdated);
+                
+                stmt.close();
+                
+                // ✅ Log the action
+                logAction("Changed user ID " + finalId + " status from " + finalCurrentStatus + " to " + finalNewStatus);
+                
+                conn.close();
+                
+                // ✅ Refresh the table
+                loadUsers(table, countLabel, "");
+                
+                System.out.println("[Toggle] Success! Table refreshed.");
+                
+                // ✅ Show confirmation
+                Alert success = new Alert(Alert.AlertType.INFORMATION);
+                success.setTitle("Success");
+                success.setHeaderText("Status Updated");
+                success.setContentText("User status changed to: " + finalNewStatus);
+                success.showAndWait();
+                
+            } catch (Exception e) { 
+                System.out.println("[Toggle] Error: " + e.getMessage());
+                e.printStackTrace();
+                
+                Alert error = new Alert(Alert.AlertType.ERROR);
+                error.setTitle("Error");
+                error.setHeaderText("Failed to update status");
+                error.setContentText(e.getMessage());
+                error.showAndWait();
+            }
+        }
+    });
+}
     private void resetPassword(String id, String email) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Reset Password");
@@ -1334,8 +1483,7 @@ private void exportUsersCSV(TableView<String[]> table) {
             }
         });
     }
-
-// ── LOGS TAB ─────────────────────────────────────────────────────────[...]
+// ── LOGS TAB ───────────────────────────────────────────────────────────────────
 private Node buildLogsTab() {
     VBox container = new VBox(20);
     container.setMaxWidth(Double.MAX_VALUE);
@@ -1352,38 +1500,51 @@ private Node buildLogsTab() {
     Label subtitle = new Label("Recent system actions and changes");
     subtitle.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
     titleBox.getChildren().addAll(title, subtitle);
-    headerRow.getChildren().add(titleBox);
+    
+    Label recordCount = new Label();
+    recordCount.setStyle(
+        "-fx-font-size: 11px; -fx-text-fill: #888888;" +
+        "-fx-background-color: #f4f4f4; -fx-background-radius: 20; -fx-padding: 5 14;");
+    
+    headerRow.getChildren().addAll(titleBox, recordCount);
 
     HBox filterRow = new HBox(10);
     filterRow.setStyle(
         "-fx-alignment: CENTER_LEFT; -fx-background-color: #f8f9fa;" +
         "-fx-background-radius: 10; -fx-padding: 14 18;" +
         "-fx-border-color: #ebebeb; -fx-border-width: 1; -fx-border-radius: 10;");
+    
     Label fromLbl = new Label("From:");
     fromLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555; -fx-font-weight: bold;");
     DatePicker fromPicker = new DatePicker();
     fromPicker.setPromptText("Start date");
     fromPicker.setPrefWidth(145);
+    
     Label toLbl = new Label("To:");
     toLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555; -fx-font-weight: bold;");
     DatePicker toPicker = new DatePicker();
     toPicker.setPromptText("End date");
     toPicker.setPrefWidth(145);
+    
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
+    
     Button filterBtn = new Button("Apply Filter");
     filterBtn.setStyle(
         "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
         "-fx-font-size: 12px; -fx-font-weight: bold;" +
         "-fx-background-radius: 8; -fx-padding: 9 18; -fx-cursor: hand;");
+    
     Button clearFilterBtn = new Button("Clear");
     clearFilterBtn.setStyle(
         "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
         "-fx-font-size: 12px; -fx-background-radius: 8;" +
         "-fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-padding: 9 14; -fx-cursor: hand;");
+    
     filterRow.getChildren().addAll(
         fromLbl, fromPicker, toLbl, toPicker, spacer, filterBtn, clearFilterBtn);
 
+    // ✅ Table
     TableView<String[]> table = new TableView<>();
     table.setMaxWidth(Double.MAX_VALUE);
     table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -1392,84 +1553,118 @@ private Node buildLogsTab() {
         "-fx-border-width: 1; -fx-border-radius: 10;" +
         "-fx-table-cell-border-color: #f8f8f8;");
     table.setPrefHeight(400);
+    table.setFixedCellSize(50);
     
     table.setRowFactory(tv -> new TableRow<String[]>() {
         @Override
         protected void updateItem(String[] item, boolean empty) {
             super.updateItem(item, empty);
-            if (ThemeManager.isDarkMode) {
-                setStyle(empty || item == null
-                    ? "-fx-background-color: transparent;"
-                    : getIndex() % 2 == 0
+            if (empty || item == null) {
+                setStyle("-fx-background-color: transparent;");
+                setVisible(false);
+            } else {
+                setVisible(true);
+                if (ThemeManager.isDarkMode) {
+                    setStyle(getIndex() % 2 == 0
                         ? "-fx-background-color: #1a1a1a; -fx-pref-height: 50px;"
                         : "-fx-background-color: #242424; -fx-pref-height: 50px;");
-            } else {
-                setStyle(empty || item == null
-                    ? "-fx-background-color: transparent;"
-                    : getIndex() % 2 == 0
+                } else {
+                    setStyle(getIndex() % 2 == 0
                         ? "-fx-background-color: #ffffff; -fx-pref-height: 50px;"
                         : "-fx-background-color: #fafbfc; -fx-pref-height: 50px;");
+                }
             }
         }
     });
 
+    // ✅ Column: ID
     TableColumn<String[], String> colId = new TableColumn<>("#");
     colId.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[0]));
     colId.setPrefWidth(60);
+    colId.setMinWidth(60);
+    colId.setMaxWidth(60);
     colId.setCellFactory(col -> new TableCell<String[], String>() {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
-            setText(empty ? null : item);
+            if (empty || item == null) {
+                setText(null);
+                return;
+            }
+            setText(item);
             setStyle(ThemeManager.isDarkMode ? "-fx-text-fill: white;" : "");
         }
     });
 
+    // ✅ Column: Action
     TableColumn<String[], String> colAction = new TableColumn<>("Action");
     colAction.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[1]));
     colAction.setCellFactory(col -> new TableCell<String[], String>() {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
-            setText(empty ? null : item);
+            if (empty || item == null) {
+                setText(null);
+                return;
+            }
+            setText(item);
+            setWrapText(true);
             setStyle(ThemeManager.isDarkMode ? "-fx-text-fill: white;" : "");
         }
     });
 
+    // ✅ Column: Performed By
     TableColumn<String[], String> colBy = new TableColumn<>("Performed By");
     colBy.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[2]));
-    colBy.setPrefWidth(160);
+    colBy.setPrefWidth(140);
+    colBy.setMinWidth(140);
     colBy.setCellFactory(col -> new TableCell<String[], String>() {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
-            setText(empty ? null : item);
+            if (empty || item == null) {
+                setText(null);
+                return;
+            }
+            setText(item);
             setStyle(ThemeManager.isDarkMode ? "-fx-text-fill: white;" : "");
         }
     });
 
+    // ✅ Column: Date & Time (FIXED)
     TableColumn<String[], String> colDate = new TableColumn<>("Date & Time");
     colDate.setCellValueFactory(d -> new SimpleStringProperty(d.getValue()[3]));
-    colDate.setPrefWidth(170);
+    colDate.setPrefWidth(200);
+    colDate.setMinWidth(200);
     colDate.setCellFactory(col -> new TableCell<String[], String>() {
         @Override
         protected void updateItem(String item, boolean empty) {
             super.updateItem(item, empty);
-            setText(empty ? null : item);
+            if (empty || item == null) {
+                setText(null);
+                return;
+            }
+            setText(item);
             setStyle(ThemeManager.isDarkMode ? "-fx-text-fill: white;" : "");
         }
     });
 
     table.getColumns().addAll(colId, colAction, colBy, colDate);
 
-    loadLogs(table, null, null);
-    filterBtn.setOnAction(e -> loadLogs(table, fromPicker.getValue(), toPicker.getValue()));
+    // ✅ Load logs
+    loadLogs(table, recordCount, null, null);
+    
+    // ✅ Filter button
+    filterBtn.setOnAction(e -> loadLogs(table, recordCount, fromPicker.getValue(), toPicker.getValue()));
+    
+    // ✅ Clear filter button
     clearFilterBtn.setOnAction(e -> {
         fromPicker.setValue(null);
         toPicker.setValue(null);
-        loadLogs(table, null, null);
+        loadLogs(table, recordCount, null, null);
     });
 
+    // ✅ Clear all logs button
     Button clearBtn = new Button("Clear All Logs");
     clearBtn.setStyle(
         "-fx-background-color: #ffebee; -fx-text-fill: #c62828;" +
@@ -1480,18 +1675,38 @@ private Node buildLogsTab() {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Clear Logs");
         confirm.setHeaderText("Clear all activity logs?");
-        confirm.setContentText("This cannot be undone.");
+        confirm.setContentText("This action cannot be undone.");
         confirm.showAndWait().ifPresent(r -> {
             if (r == ButtonType.OK) {
                 try {
                     Connection conn = DatabaseConnection.getConnection();
-                    conn.prepareStatement("DELETE FROM logs").executeUpdate();
+                    PreparedStatement stmt = conn.prepareStatement("DELETE FROM logs");
+                    int rowsDeleted = stmt.executeUpdate();
+                    stmt.close();
                     conn.close();
-                    table.getItems().clear();
-                } catch (Exception ex) { ex.printStackTrace(); }
+                    
+                    System.out.println("[Logs] Cleared " + rowsDeleted + " rows");
+                    loadLogs(table, recordCount, null, null);
+                    
+                    Alert success = new Alert(Alert.AlertType.INFORMATION);
+                    success.setTitle("Success");
+                    success.setHeaderText("Logs Cleared");
+                    success.setContentText("All activity logs have been cleared.");
+                    success.showAndWait();
+                } catch (Exception ex) { 
+                    System.out.println("[Logs] Error clearing: " + ex.getMessage());
+                    ex.printStackTrace();
+                    
+                    Alert error = new Alert(Alert.AlertType.ERROR);
+                    error.setTitle("Error");
+                    error.setHeaderText("Failed to clear logs");
+                    error.setContentText(ex.getMessage());
+                    error.showAndWait();
+                }
             }
         });
     });
+    
     HBox footer = new HBox();
     footer.setStyle("-fx-alignment: CENTER_RIGHT; -fx-padding: 4 0 0 0;");
     footer.getChildren().add(clearBtn);
@@ -1499,327 +1714,379 @@ private Node buildLogsTab() {
     container.getChildren().addAll(headerRow, filterRow, table, footer);
     return container;
 }
-
-private void loadLogs(TableView<String[]> table, LocalDate from, LocalDate to) {
+// ✅ COMPLETE FIXED: Use log_id instead of id
+private void loadLogs(TableView<String[]> table, Label recordCount, LocalDate from, LocalDate to) {
     List<String[]> rows = new ArrayList<>();
     try {
         Connection conn = DatabaseConnection.getConnection();
+        
+        // ✅ Build query - changed 'id' to 'log_id'
         StringBuilder sql = new StringBuilder(
             "SELECT log_id, action, performed_by, log_date FROM logs WHERE 1=1");
-        if (from != null) sql.append(" AND log_date >= #").append(from).append("#");
-        if (to != null)   sql.append(" AND log_date <= #").append(to).append("#");
+        
+        if (from != null) {
+            sql.append(" AND DATE(log_date) >= '").append(from).append("'");
+        }
+        if (to != null) {
+            sql.append(" AND DATE(log_date) <= '").append(to).append("'");
+        }
+        
         sql.append(" ORDER BY log_id DESC");
-        ResultSet rs = conn.prepareStatement(sql.toString()).executeQuery();
+        
+        System.out.println("[Logs] SQL Query: " + sql.toString());
+        
+        // ✅ Execute query
+        PreparedStatement pstmt = conn.prepareStatement(sql.toString());
+        ResultSet rs = pstmt.executeQuery();
+        
+        int count = 0;
         while (rs.next()) {
-            rows.add(new String[]{
-                String.valueOf(rs.getInt("log_id")),
-                rs.getString("action"),
-                rs.getString("performed_by") != null ? rs.getString("performed_by") : "Admin",
-                rs.getString("log_date")     != null ? rs.getString("log_date")     : "—"
-            });
+            String id  = String.valueOf(rs.getInt("log_id"));  // ✅ Changed from 'id' to 'log_id'
+            String act = rs.getString("action") != null ? rs.getString("action").trim() : "—";
+            String by  = rs.getString("performed_by") != null ? rs.getString("performed_by").trim() : "System";
+            
+            // ✅ Format the date properly (YYYY-MM-DD HH:MM:SS)
+            String dt = "—";
+            try {
+                String rawDate = rs.getString("log_date");
+                if (rawDate != null && !rawDate.isEmpty()) {
+                    dt = rawDate.substring(0, Math.min(19, rawDate.length())); // Get YYYY-MM-DD HH:MM:SS
+                }
+            } catch (Exception dateEx) {
+                System.out.println("[Logs] Date parse error: " + dateEx.getMessage());
+            }
+            
+            rows.add(new String[]{id, act, by, dt});
+            count++;
+            System.out.println("[Logs] Row " + count + ": log_id=" + id + " | Action=" + act + " | By=" + by + " | Date=" + dt);
         }
         rs.close();
+        pstmt.close();
         conn.close();
-    } catch (Exception e) { e.printStackTrace(); }
+        
+        System.out.println("[Logs] ✅ Successfully loaded " + count + " records");
+        
+    } catch (Exception e) { 
+        System.out.println("[Logs] ❌ Error: " + e.getMessage());
+        e.printStackTrace();
+        
+        Alert error = new Alert(Alert.AlertType.ERROR);
+        error.setTitle("Error");
+        error.setHeaderText("Failed to load logs");
+        error.setContentText(e.getMessage());
+        error.showAndWait();
+    }
+    
+    // ✅ Clear and set table items
+    table.getItems().clear();
     table.setItems(FXCollections.observableArrayList(rows));
+    
+    if (recordCount != null) {
+        recordCount.setText(rows.size() + " record" + (rows.size() != 1 ? "s" : ""));
+    }
+    
+    System.out.println("[Logs] Table updated with " + rows.size() + " items");
 }
-  // ── PASSWORD TAB ───────────────────────────────────────────────────────[...]
-private Node buildPasswordTab() {
-    HBox wrapper = new HBox();
-    wrapper.setMaxWidth(Double.MAX_VALUE);
-    wrapper.setStyle("-fx-alignment: CENTER;");
+    // ── PASSWORD TAB ───────────────────────────────────────────────────────────────
+    private Node buildPasswordTab() {
+        HBox wrapper = new HBox();
+        wrapper.setMaxWidth(Double.MAX_VALUE);
+        wrapper.setStyle("-fx-alignment: CENTER;");
 
-    VBox container = new VBox(22);
-    container.setMaxWidth(520);
-    container.setMinWidth(520);
-    
-    String containerBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
-    String containerBorder = ThemeManager.isDarkMode ? "#333333" : "#e8e8e8";
-    String fieldBg = ThemeManager.isDarkMode ? "#242424" : "#f8f9fa";
-    String fieldBorder = ThemeManager.isDarkMode ? "#444444" : "#e8e8e8";
-    String fieldText = ThemeManager.isDarkMode ? "#ffffff" : "#000000";
-    String labelText = ThemeManager.isDarkMode ? "#cccccc" : "#999999";
-    
-    container.setStyle(
-        "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
-        "-fx-border-color: " + containerBorder + "; -fx-border-width: 1; -fx-padding: 36;");
+        VBox container = new VBox(22);
+        container.setMaxWidth(520);
+        container.setMinWidth(520);
+        
+        String containerBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        String containerBorder = ThemeManager.isDarkMode ? "#333333" : "#e8e8e8";
+        String fieldBg = ThemeManager.isDarkMode ? "#242424" : "#f8f9fa";
+        String fieldBorder = ThemeManager.isDarkMode ? "#444444" : "#e8e8e8";
+        String fieldText = ThemeManager.isDarkMode ? "#ffffff" : "#000000";
+        String labelText = ThemeManager.isDarkMode ? "#cccccc" : "#999999";
+        
+        container.setStyle(
+            "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
+            "-fx-border-color: " + containerBorder + "; -fx-border-width: 1; -fx-padding: 36;");
 
-    VBox bannerBox = new VBox(6);
-    bannerBox.setMaxWidth(Double.MAX_VALUE);
-    bannerBox.setStyle(
-        "-fx-background-color: #1a1a1a; -fx-background-radius: 12; -fx-padding: 22 26;");
-    Label bannerTitle = new Label("Change Password");
-    bannerTitle.setStyle(
-        "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
-    Label bannerSub = new Label("Keep your account secure by updating your password regularly");
-    bannerSub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
-    bannerBox.getChildren().addAll(bannerTitle, bannerSub);
+        VBox bannerBox = new VBox(6);
+        bannerBox.setMaxWidth(Double.MAX_VALUE);
+        bannerBox.setStyle(
+            "-fx-background-color: #1a1a1a; -fx-background-radius: 12; -fx-padding: 22 26;");
+        Label bannerTitle = new Label("Change Password");
+        bannerTitle.setStyle(
+            "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        Label bannerSub = new Label("Keep your account secure by updating your password regularly");
+        bannerSub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
+        bannerBox.getChildren().addAll(bannerTitle, bannerSub);
 
-    String fieldStyle =
-        "-fx-font-size: 13px; -fx-padding: 12 16; -fx-background-radius: 10;" +
-        "-fx-border-color: " + fieldBorder + "; -fx-border-width: 1; -fx-border-radius: 10;" +
-        "-fx-background-color: " + fieldBg + "; -fx-text-fill: " + fieldText + ";";
-    String labelStyle =
-        "-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + labelText + ";";
+        String fieldStyle =
+            "-fx-font-size: 13px; -fx-padding: 12 16; -fx-background-radius: 10;" +
+            "-fx-border-color: " + fieldBorder + "; -fx-border-width: 1; -fx-border-radius: 10;" +
+            "-fx-background-color: " + fieldBg + "; -fx-text-fill: " + fieldText + ";";
+        String labelStyle =
+            "-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: " + labelText + ";";
 
-    Label currentLbl = new Label("CURRENT PASSWORD");
-    currentLbl.setStyle(labelStyle);
-    PasswordField currentField = new PasswordField();
-    currentField.setPromptText("Enter your current password");
-    currentField.setMaxWidth(Double.MAX_VALUE);
-    currentField.setStyle(fieldStyle);
-    VBox currentGroup = new VBox(8, currentLbl, currentField);
+        Label currentLbl = new Label("CURRENT PASSWORD");
+        currentLbl.setStyle(labelStyle);
+        PasswordField currentField = new PasswordField();
+        currentField.setPromptText("Enter your current password");
+        currentField.setMaxWidth(Double.MAX_VALUE);
+        currentField.setStyle(fieldStyle);
+        VBox currentGroup = new VBox(8, currentLbl, currentField);
 
-    Label newLbl = new Label("NEW PASSWORD");
-    newLbl.setStyle(labelStyle);
-    PasswordField newField = new PasswordField();
-    newField.setPromptText("Enter new password (min. 6 characters)");
-    newField.setMaxWidth(Double.MAX_VALUE);
-    newField.setStyle(fieldStyle);
-    VBox newGroup = new VBox(8, newLbl, newField);
+        Label newLbl = new Label("NEW PASSWORD");
+        newLbl.setStyle(labelStyle);
+        PasswordField newField = new PasswordField();
+        newField.setPromptText("Enter new password (min. 6 characters)");
+        newField.setMaxWidth(Double.MAX_VALUE);
+        newField.setStyle(fieldStyle);
+        VBox newGroup = new VBox(8, newLbl, newField);
 
-    Label confirmLbl = new Label("CONFIRM NEW PASSWORD");
-    confirmLbl.setStyle(labelStyle);
-    PasswordField confirmField = new PasswordField();
-    confirmField.setPromptText("Re-enter new password");
-    confirmField.setMaxWidth(Double.MAX_VALUE);
-    confirmField.setStyle(fieldStyle);
-    VBox confirmGroup = new VBox(8, confirmLbl, confirmField);
+        Label confirmLbl = new Label("CONFIRM NEW PASSWORD");
+        confirmLbl.setStyle(labelStyle);
+        PasswordField confirmField = new PasswordField();
+        confirmField.setPromptText("Re-enter new password");
+        confirmField.setMaxWidth(Double.MAX_VALUE);
+        confirmField.setStyle(fieldStyle);
+        VBox confirmGroup = new VBox(8, confirmLbl, confirmField);
 
-    Label errorLbl = new Label("");
-    errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
+        Label errorLbl = new Label("");
+        errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
 
-    Button saveBtn = new Button("Update Password");
-    saveBtn.setMaxWidth(Double.MAX_VALUE);
-    saveBtn.setStyle(
-        "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
-        "-fx-font-size: 13px; -fx-font-weight: bold;" +
-        "-fx-background-radius: 10; -fx-padding: 14; -fx-cursor: hand;");
+        Button saveBtn = new Button("Update Password");
+        saveBtn.setMaxWidth(Double.MAX_VALUE);
+        saveBtn.setStyle(
+            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 13px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 10; -fx-padding: 14; -fx-cursor: hand;");
 
-    saveBtn.setOnAction(e -> {
-        String current = currentField.getText().trim();
-        String newPass = newField.getText().trim();
-        String confirm = confirmField.getText().trim();
+        saveBtn.setOnAction(e -> {
+            String current = currentField.getText().trim();
+            String newPass = newField.getText().trim();
+            String confirm = confirmField.getText().trim();
 
-        if (current.isEmpty() || newPass.isEmpty() || confirm.isEmpty()) {
-            errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
-            errorLbl.setText("⚠  Please fill in all fields.");
-            return;
-        }
-        if (!newPass.equals(confirm)) {
-            errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
-            errorLbl.setText("⚠  New passwords do not match.");
-            return;
-        }
-        if (newPass.length() < 6) {
-            errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
-            errorLbl.setText("⚠  Password must be at least 6 characters.");
-            return;
-        }
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            PreparedStatement checkStmt = conn.prepareStatement(
-                "SELECT id FROM users WHERE role = 'admin' AND password = ?");
-            checkStmt.setString(1, current);
-            ResultSet rs = checkStmt.executeQuery();
-            if (!rs.next()) {
+            if (current.isEmpty() || newPass.isEmpty() || confirm.isEmpty()) {
                 errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
-                errorLbl.setText("⚠  Current password is incorrect.");
-                rs.close(); checkStmt.close(); conn.close();
+                errorLbl.setText("⚠  Please fill in all fields.");
                 return;
             }
-            String adminId = rs.getString("id");
-            rs.close(); checkStmt.close();
+            if (!newPass.equals(confirm)) {
+                errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
+                errorLbl.setText("⚠  New passwords do not match.");
+                return;
+            }
+            if (newPass.length() < 6) {
+                errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
+                errorLbl.setText("⚠  Password must be at least 6 characters.");
+                return;
+            }
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                PreparedStatement checkStmt = conn.prepareStatement(
+                    "SELECT id FROM users WHERE role = 'admin' AND password = ?");
+                checkStmt.setString(1, current);
+                ResultSet rs = checkStmt.executeQuery();
+                if (!rs.next()) {
+                    errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
+                    errorLbl.setText("⚠  Current password is incorrect.");
+                    rs.close(); checkStmt.close(); conn.close();
+                    return;
+                }
+                String adminId = rs.getString("id");
+                rs.close(); checkStmt.close();
 
-            PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE users SET password = ? WHERE id = ?");
-            stmt.setString(1, newPass);
-            stmt.setInt(2, Integer.parseInt(adminId));
-            stmt.executeUpdate();
-            stmt.close();
-            logAction("Admin changed their password");
-            conn.close();
+                PreparedStatement stmt = conn.prepareStatement(
+                    "UPDATE users SET password = ? WHERE id = ?");
+                stmt.setString(1, newPass);
+                stmt.setInt(2, Integer.parseInt(adminId));
+                stmt.executeUpdate();
+                stmt.close();
+                logAction("Admin changed their password");
+                conn.close();
 
-            currentField.clear();
-            newField.clear();
-            confirmField.clear();
-            errorLbl.setStyle("-fx-text-fill: #2e7d32; -fx-font-size: 12px;");
-            errorLbl.setText("✅  Password updated successfully!");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
-            errorLbl.setText("⚠  Database error. Please try again.");
+                currentField.clear();
+                newField.clear();
+                confirmField.clear();
+                errorLbl.setStyle("-fx-text-fill: #2e7d32; -fx-font-size: 12px;");
+                errorLbl.setText("✅  Password updated successfully!");
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                errorLbl.setStyle("-fx-text-fill: #c62828; -fx-font-size: 12px;");
+                errorLbl.setText("⚠  Database error. Please try again.");
+            }
+        });
+
+        container.getChildren().addAll(
+            bannerBox, currentGroup, newGroup, confirmGroup, errorLbl, saveBtn);
+        wrapper.getChildren().add(container);
+        return wrapper;
+    }
+
+    // ── STATISTICS TAB ──────────────────────────────────────────────────────────────
+    private Node buildStatsTab() {
+        VBox container = new VBox(24);
+        container.setMaxWidth(Double.MAX_VALUE);
+        
+        String containerBg = ThemeManager.isDarkMode ? "#0f0f0f" : "#ffffff";
+        String containerBorder = ThemeManager.isDarkMode ? "#2a2a2a" : "#e8e8e8";
+        
+        container.setStyle(
+            "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
+            "-fx-border-color: " + containerBorder + "; -fx-border-width: 1; -fx-padding: 28;");
+
+        HBox headerRow = new HBox(10);
+        headerRow.setStyle("-fx-alignment: CENTER_LEFT;");
+        VBox titleBox = new VBox(4);
+        HBox.setHgrow(titleBox, Priority.ALWAYS);
+        Label title = new Label("System Statistics");
+        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + 
+            (ThemeManager.isDarkMode ? "#ffffff" : "#1a1a1a") + ";");
+        Label subtitle = new Label("Live overview of all data across the system");
+        subtitle.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        titleBox.getChildren().addAll(title, subtitle);
+
+        Button refreshBtn = new Button("Refresh");
+        refreshBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+            "-fx-font-size: 12px; -fx-background-radius: 8;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-padding: 9 16; -fx-cursor: hand;");
+        refreshBtn.setOnAction(e -> {
+            setActiveTab(tabStatsBtn);
+            tabContent.getChildren().setAll(buildStatsTab());
+        });
+        headerRow.getChildren().addAll(titleBox, refreshBtn);
+
+        int residents          = getCount("SELECT COUNT(*) FROM residents WHERE status = 'Active'");
+        int activeResidents    = getCount("SELECT COUNT(*) FROM residents WHERE status = 'Active'");
+        int inactiveResidents  = getCount("SELECT COUNT(*) FROM residents WHERE status = 'Inactive'");
+        int totalPayments      = getCount("SELECT COUNT(*) FROM payments");
+        int paidPayments       = getCount("SELECT COUNT(*) FROM payments WHERE status = 'Paid'");
+        int pendingPayments    = getCount("SELECT COUNT(*) FROM payments WHERE status = 'Pending'");
+        int totalComplaints    = getCount("SELECT COUNT(*) FROM complaints");
+        int pendingComplaints  = getCount("SELECT COUNT(*) FROM complaints WHERE status = 'Pending'");
+        int resolvedComplaints = getCount("SELECT COUNT(*) FROM complaints WHERE status = 'Resolved'");
+        int underReview        = getCount("SELECT COUNT(*) FROM complaints WHERE status = 'Under Review'");
+        int announcements      = getCount("SELECT COUNT(*) FROM announcements");
+        int totalUsers         = getCount("SELECT COUNT(*) FROM users");
+        int expenses           = getCount("SELECT COUNT(*) FROM finances WHERE type = 'Expense'");
+
+        VBox resSection = buildStatSection("Residents", new String[][]{
+            {"Total Residents", String.valueOf(residents),                
+                ThemeManager.isDarkMode ? "#404040" : "#1a1a1a", "#ffffff"},
+            {"Active",          String.valueOf(activeResidents),          "#e8f5e9", "#2e7d32"},
+            {"Inactive",        String.valueOf(inactiveResidents),        "#ffebee", "#c62828"}
+        });
+        VBox paySection = buildStatSection("Payments", new String[][]{
+            {"Total",   String.valueOf(totalPayments),   "#e3f2fd", "#1565c0"},
+            {"Paid",    String.valueOf(paidPayments),    "#e8f5e9", "#2e7d32"},
+            {"Pending", String.valueOf(pendingPayments), "#fff8e1", "#f57f17"}
+        });
+        VBox cmpSection = buildStatSection("Complaints", new String[][]{
+            {"Total",        String.valueOf(totalComplaints),    "#f3e5f5", "#7b1fa2"},
+            {"Pending",      String.valueOf(pendingComplaints),  "#fff8e1", "#f57f17"},
+            {"Under Review", String.valueOf(underReview),        "#e3f2fd", "#1565c0"},
+            {"Resolved",     String.valueOf(resolvedComplaints), "#e8f5e9", "#2e7d32"}
+        });
+        VBox otherSection = buildStatSection("Other", new String[][]{
+            {"Announcements", String.valueOf(announcements), "#fce4ec", "#c62828"},
+            {"System Users",  String.valueOf(totalUsers),    "#e3f2fd", "#1565c0"},
+            {"Expenses",      String.valueOf(expenses),      "#ffebee", "#c62828"}
+        });
+
+        container.getChildren().addAll(
+            headerRow, resSection, paySection, cmpSection, otherSection);
+        return container;
+    }
+
+    private VBox buildStatSection(String sectionTitle, String[][] items) {
+        VBox section = new VBox(12);
+        section.setMaxWidth(Double.MAX_VALUE);
+
+        Label sectionLbl = new Label(sectionTitle);
+        String sectionLblColor = ThemeManager.isDarkMode ? "#bbbbbb" : "#999999";
+        sectionLbl.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " + sectionLblColor + ";" +
+            "-fx-padding: 0 0 2 0;");
+
+        HBox row = new HBox(14);
+        row.setMaxWidth(Double.MAX_VALUE);
+        for (String[] item : items) {
+            VBox card = new VBox(10);
+            HBox.setHgrow(card, Priority.ALWAYS);
+            card.setStyle(
+                "-fx-background-color: " + item[2] + "; -fx-background-radius: 14;" +
+                "-fx-padding: 24 28; -fx-min-height: 110;");
+            Label valLbl = new Label(item[1]);
+            valLbl.setStyle(
+                "-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: " + item[3] + ";");
+            Label nameLbl = new Label(item[0]);
+            nameLbl.setStyle(
+                "-fx-font-size: 12px; -fx-text-fill: " + item[3] + "; -fx-opacity: 0.7;");
+            card.getChildren().addAll(valLbl, nameLbl);
+            row.getChildren().add(card);
         }
-    });
 
-    container.getChildren().addAll(
-        bannerBox, currentGroup, newGroup, confirmGroup, errorLbl, saveBtn);
-    wrapper.getChildren().add(container);
-    return wrapper;
-}
-// ── STATISTICS TAB ───────────────────────────────────────────────────────[...]
-private Node buildStatsTab() {
-    VBox container = new VBox(24);
-    container.setMaxWidth(Double.MAX_VALUE);
-    
-    String containerBg = ThemeManager.isDarkMode ? "#0f0f0f" : "#ffffff";
-    String containerBorder = ThemeManager.isDarkMode ? "#2a2a2a" : "#e8e8e8";
-    
-    container.setStyle(
-        "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
-        "-fx-border-color: " + containerBorder + "; -fx-border-width: 1; -fx-padding: 28;");
+        Separator sep = new Separator();
+        String sepOpacity = ThemeManager.isDarkMode ? "-fx-opacity: 0.3;" : "-fx-opacity: 0.2;";
+        sep.setStyle(sepOpacity);
+        section.getChildren().addAll(sectionLbl, row, sep);
+        return section;
+    }
 
-    HBox headerRow = new HBox(10);
-    headerRow.setStyle("-fx-alignment: CENTER_LEFT;");
-    VBox titleBox = new VBox(4);
-    HBox.setHgrow(titleBox, Priority.ALWAYS);
-    Label title = new Label("System Statistics");
-    title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + 
-        (ThemeManager.isDarkMode ? "#ffffff" : "#1a1a1a") + ";");
-    Label subtitle = new Label("Live overview of all data across the system");
-    subtitle.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
-    titleBox.getChildren().addAll(title, subtitle);
+    private int getCount(String sql) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            ResultSet rs = conn.prepareStatement(sql).executeQuery();
+            int count = rs.next() ? rs.getInt(1) : 0;
+            rs.close();
+            conn.close();
+            return count;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
 
-    Button refreshBtn = new Button("Refresh");
-    refreshBtn.setStyle(
-        "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
-        "-fx-font-size: 12px; -fx-background-radius: 8;" +
-        "-fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-padding: 9 16; -fx-cursor: hand;");
-    refreshBtn.setOnAction(e -> {
-        setActiveTab(tabStatsBtn);
-        tabContent.getChildren().setAll(buildStatsTab());
-    });
-    headerRow.getChildren().addAll(titleBox, refreshBtn);
-
-    int residents          = getCount("SELECT COUNT(*) FROM residents");
-    int activeResidents    = getCount("SELECT COUNT(*) FROM residents WHERE status = 'Active'");
-    int totalPayments      = getCount("SELECT COUNT(*) FROM payments");
-    int paidPayments       = getCount("SELECT COUNT(*) FROM payments WHERE status = 'Paid'");
-    int pendingPayments    = getCount("SELECT COUNT(*) FROM payments WHERE status = 'Pending'");
-    int totalComplaints    = getCount("SELECT COUNT(*) FROM complaints");
-    int pendingComplaints  = getCount("SELECT COUNT(*) FROM complaints WHERE status = 'Pending'");
-    int resolvedComplaints = getCount("SELECT COUNT(*) FROM complaints WHERE status = 'Resolved'");
-    int underReview        = getCount("SELECT COUNT(*) FROM complaints WHERE status = 'Under Review'");
-    int announcements      = getCount("SELECT COUNT(*) FROM announcements");
-    int totalUsers         = getCount("SELECT COUNT(*) FROM users");
-    int expenses           = getCount("SELECT COUNT(*) FROM finances WHERE type = 'Expense'");
-
-    VBox resSection = buildStatSection("Residents", new String[][]{
-        {"Total Residents", String.valueOf(residents),                
-            ThemeManager.isDarkMode ? "#404040" : "#1a1a1a", "#ffffff"},
-        {"Active",          String.valueOf(activeResidents),          "#e8f5e9", "#2e7d32"},
-        {"Inactive",        String.valueOf(residents-activeResidents),"#ffebee", "#c62828"}
-    });
-    VBox paySection = buildStatSection("Payments", new String[][]{
-        {"Total",   String.valueOf(totalPayments),   "#e3f2fd", "#1565c0"},
-        {"Paid",    String.valueOf(paidPayments),    "#e8f5e9", "#2e7d32"},
-        {"Pending", String.valueOf(pendingPayments), "#fff8e1", "#f57f17"}
-    });
-    VBox cmpSection = buildStatSection("Complaints", new String[][]{
-        {"Total",        String.valueOf(totalComplaints),    "#f3e5f5", "#7b1fa2"},
-        {"Pending",      String.valueOf(pendingComplaints),  "#fff8e1", "#f57f17"},
-        {"Under Review", String.valueOf(underReview),        "#e3f2fd", "#1565c0"},
-        {"Resolved",     String.valueOf(resolvedComplaints), "#e8f5e9", "#2e7d32"}
-    });
-    VBox otherSection = buildStatSection("Other", new String[][]{
-        {"Announcements", String.valueOf(announcements), "#fce4ec", "#c62828"},
-        {"System Users",  String.valueOf(totalUsers),    "#e3f2fd", "#1565c0"},
-        {"Expenses",      String.valueOf(expenses),      "#ffebee", "#c62828"}
-    });
-
-    container.getChildren().addAll(
-        headerRow, resSection, paySection, cmpSection, otherSection);
-    return container;
-}
-
-private VBox buildStatSection(String sectionTitle, String[][] items) {
-    VBox section = new VBox(12);
-    section.setMaxWidth(Double.MAX_VALUE);
-
-    Label sectionLbl = new Label(sectionTitle);
-    String sectionLblColor = ThemeManager.isDarkMode ? "#bbbbbb" : "#999999";
-    sectionLbl.setStyle(
-        "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: " + sectionLblColor + ";" +
-        "-fx-padding: 0 0 2 0;");
-
-    HBox row = new HBox(14);
-    row.setMaxWidth(Double.MAX_VALUE);
-    for (String[] item : items) {
-        VBox card = new VBox(10);
+    private VBox buildMiniCard(String label, String value, String bg, String fg, String icon) {
+        VBox card = new VBox(6);
         HBox.setHgrow(card, Priority.ALWAYS);
         card.setStyle(
-            "-fx-background-color: " + item[2] + "; -fx-background-radius: 14;" +
-            "-fx-padding: 24 28; -fx-min-height: 110;");
-        Label valLbl = new Label(item[1]);
+            "-fx-background-color: " + bg + "; -fx-background-radius: 12; -fx-padding: 18 20;");
+        Label iconLbl = new Label(icon);
+        iconLbl.setStyle("-fx-font-size: 18px;");
+        Label valLbl = new Label(value);
         valLbl.setStyle(
-            "-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: " + item[3] + ";");
-        Label nameLbl = new Label(item[0]);
+            "-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: " + fg + ";");
+        Label nameLbl = new Label(label);
         nameLbl.setStyle(
-            "-fx-font-size: 12px; -fx-text-fill: " + item[3] + "; -fx-opacity: 0.7;");
-        card.getChildren().addAll(valLbl, nameLbl);
-        row.getChildren().add(card);
+            "-fx-font-size: 11px; -fx-text-fill: " + fg + "; -fx-opacity: 0.75;");
+        card.getChildren().addAll(iconLbl, valLbl, nameLbl);
+        return card;
     }
 
-    Separator sep = new Separator();
-    String sepOpacity = ThemeManager.isDarkMode ? "-fx-opacity: 0.3;" : "-fx-opacity: 0.2;";
-    sep.setStyle(sepOpacity);
-    section.getChildren().addAll(sectionLbl, row, sep);
-    return section;
-}
-
-private int getCount(String sql) {
-    try {
-        Connection conn = DatabaseConnection.getConnection();
-        ResultSet rs = conn.prepareStatement(sql).executeQuery();
-        int count = rs.next() ? rs.getInt(1) : 0;
-        rs.close();
-        conn.close();
-        return count;
-    } catch (Exception e) {
-        e.printStackTrace();
-        return 0;
+    private void logAction(String action) {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(
+                "INSERT INTO logs (action, performed_by, log_date) VALUES (?, ?, ?)");
+            stmt.setString(1, action);
+            stmt.setString(2, "Admin");
+            stmt.setString(3, LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+            stmt.executeUpdate();
+            stmt.close();
+            conn.close();
+        } catch (Exception e) { e.printStackTrace(); }
     }
-}
 
-private VBox buildMiniCard(String label, String value, String bg, String fg, String icon) {
-    VBox card = new VBox(6);
-    HBox.setHgrow(card, Priority.ALWAYS);
-    card.setStyle(
-        "-fx-background-color: " + bg + "; -fx-background-radius: 12; -fx-padding: 18 20;");
-    Label iconLbl = new Label(icon);
-    iconLbl.setStyle("-fx-font-size: 18px;");
-    Label valLbl = new Label(value);
-    valLbl.setStyle(
-        "-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: " + fg + ";");
-    Label nameLbl = new Label(label);
-    nameLbl.setStyle(
-        "-fx-font-size: 11px; -fx-text-fill: " + fg + "; -fx-opacity: 0.75;");
-    card.getChildren().addAll(iconLbl, valLbl, nameLbl);
-    return card;
-}
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Info");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
 
-private void logAction(String action) {
-    try {
-        Connection conn = DatabaseConnection.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(
-            "INSERT INTO logs (action, performed_by, log_date) VALUES (?, ?, ?)");
-        stmt.setString(1, action);
-        stmt.setString(2, "Admin");
-        stmt.setString(3, LocalDateTime.now()
-            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        stmt.executeUpdate();
-        stmt.close();
-        conn.close();
-    } catch (Exception e) { e.printStackTrace(); }
-}
-
-private void showInfo(String message) {
-    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-    alert.setTitle("Info");
-    alert.setHeaderText(null);
-    alert.setContentText(message);
-    alert.showAndWait();
-}
     // NAVIGATION
     @FXML private void goToDashboard() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();

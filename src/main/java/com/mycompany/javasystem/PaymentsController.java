@@ -22,6 +22,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PaymentsController {
 
@@ -40,15 +43,69 @@ public class PaymentsController {
     @FXML private Label totalCollectedLabel;
     @FXML private Label pendingCountLabel;
     @FXML private Label paidCountLabel;
+    @FXML private ScrollPane mainScrollPane;
 
     private Timeline autoRefresh;
 
+    // ── Load Balancing Config ─────────────────────────────────────────────────
+    private static final int BATCH_SIZE          = 15;
+    private static final int TOTAL_DISPLAY_LIMIT = 200;
+
+    // ── State (all access on FX thread except cachedRows written once) ────────
+    private final AtomicBoolean isFetching  = new AtomicBoolean(false);
+    private final AtomicBoolean isRendering = new AtomicBoolean(false);
+    private int rowsDisplayed = 0;
+    private List<PaymentRowData> cachedRows = new ArrayList<>();
+
+    private String currentSearch = "";
+    private String currentStatus = "All";
+
+    // ── Executor ──────────────────────────────────────────────────────────────
+    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+    // ── Scroll debounce ───────────────────────────────────────────────────────
+    private Timeline scrollDebounce;
+
+    // ── Data Cache ────────────────────────────────────────────────────────────
+    private static class PaymentRowData {
+        final String paymentId, refNumber, residentName, paymentType, dateCreated, payStatus;
+        final double amount;
+
+        PaymentRowData(String paymentId, String refNumber, String residentName,
+                       String paymentType, double amount, String dateCreated, String payStatus) {
+            this.paymentId    = paymentId;
+            this.refNumber    = refNumber;
+            this.residentName = residentName;
+            this.paymentType  = paymentType;
+            this.amount       = amount;
+            this.dateCreated  = dateCreated;
+            this.payStatus    = payStatus;
+        }
+    }
+
+    // =========================================================================
+    //  INIT
+    // =========================================================================
     @FXML
     public void initialize() {
         loadTopBar();
         loadAvatarPicture();
+
         filterStatus.getItems().addAll("All", "Pending", "Paid");
         filterStatus.setValue("All");
+        filterStatus.setOnAction(e -> handleFilter());
+
+        if (mainScrollPane != null) {
+            mainScrollPane.setFitToWidth(true);
+            mainScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+            mainScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+            // ✅ ENSURE VBOX FILLS WIDTH
+            paymentsTableBody.setFillWidth(true);
+            paymentsTableBody.setMaxWidth(Double.MAX_VALUE);
+            paymentsTableBody.setStyle("-fx-padding: 0;");
+            setupScrollListener();
+        }
+
         loadPayments("", "All");
         loadSummary();
         syncNotifications();
@@ -56,7 +113,186 @@ public class PaymentsController {
         startAutoRefresh();
     }
 
-    // ── Top Bar ───────────────────────────────────────────────────────────────────
+    // =========================================================================
+    //  SCROLL – debounced, fires loadMoreBatch only once per 300 ms
+    //  Threshold at 0.70 so it triggers before the very bottom
+    // =========================================================================
+    private void setupScrollListener() {
+        mainScrollPane.vvalueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal.doubleValue() < 0.70) return;
+            if (isRendering.get() || isFetching.get()) return;
+            if (rowsDisplayed >= cachedRows.size()
+                    || rowsDisplayed >= TOTAL_DISPLAY_LIMIT) return;
+
+            if (scrollDebounce != null) scrollDebounce.stop();
+            scrollDebounce = new Timeline(new KeyFrame(Duration.millis(300), e -> {
+                if (!isRendering.get() && !isFetching.get()
+                        && rowsDisplayed < cachedRows.size()
+                        && rowsDisplayed < TOTAL_DISPLAY_LIMIT) {
+                    System.out.println("[Payments] Loading more batch... rowsDisplayed=" + rowsDisplayed + 
+                        ", cachedSize=" + cachedRows.size());
+                    loadMoreBatch();
+                }
+            }));
+            scrollDebounce.setCycleCount(1);
+            scrollDebounce.play();
+        });
+    }
+
+    // =========================================================================
+    //  PRIMARY LOAD – resets everything, fetches DB in background, renders first batch
+    // =========================================================================
+    private void loadPayments(String search, String status) {
+        if (isFetching.get()) return;
+
+        currentSearch = search;
+        currentStatus = status;
+
+        rowsDisplayed = 0;
+        cachedRows    = new ArrayList<>();
+
+        paymentsTableBody.getChildren().clear();
+        Label loadingLbl = new Label("⏳ Loading payments...");
+        loadingLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666; -fx-padding: 20;");
+        paymentsTableBody.getChildren().add(loadingLbl);
+
+        isFetching.set(true);
+        executorService.execute(() -> {
+            try {
+                List<PaymentRowData> rows = fetchFromDB(search, status);
+
+                Platform.runLater(() -> {
+                    isFetching.set(false);
+                    cachedRows    = rows;
+                    rowsDisplayed = 0;
+                    paymentsTableBody.getChildren().clear();
+
+                    if (cachedRows.isEmpty()) {
+                        Label empty = new Label("No payments found.");
+                        empty.setStyle(
+                            "-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;");
+                        VBox.setMargin(empty, new Insets(20, 0, 20, 16));
+                        paymentsTableBody.getChildren().add(empty);
+                        return;
+                    }
+
+                    renderBatch();
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                isFetching.set(false);
+                Platform.runLater(() -> {
+                    paymentsTableBody.getChildren().clear();
+                    Label err = new Label("Error loading payments: " + e.getMessage());
+                    err.setStyle("-fx-font-size: 12px; -fx-text-fill: #e53935;");
+                    paymentsTableBody.getChildren().add(err);
+                });
+            }
+        });
+    }
+
+    // =========================================================================
+    //  DB FETCH – runs on background thread, returns plain list (no UI touches)
+    // =========================================================================
+    private List<PaymentRowData> fetchFromDB(String search, String status) throws Exception {
+        List<PaymentRowData> rows = new ArrayList<>();
+        Connection conn = DatabaseConnection.getConnection();
+
+        PreparedStatement stmt = conn.prepareStatement(
+            "SELECT p.payment_id, p.ref_number, r.full_name, p.payment_type, " +
+            "       p.amount, p.date_created, p.status " +
+            "FROM payments p " +
+            "LEFT JOIN residents r ON p.resident_id = r.id " +
+            "WHERE p.archived = 0 " +
+            "ORDER BY p.id DESC");
+
+        ResultSet rs = stmt.executeQuery();
+        String lSearch = search.toLowerCase();
+
+        while (rs.next()) {
+            String paymentId    = rs.getString("payment_id");
+            String refNumber    = rs.getString("ref_number");
+            String residentName = rs.getString("full_name");
+            String paymentType  = rs.getString("payment_type");
+            double amount       = rs.getDouble("amount");
+            String dateCreated  = rs.getString("date_created");
+            String payStatus    = rs.getString("status");
+
+            if (!lSearch.isEmpty()) {
+                boolean nameMatch = residentName != null
+                    && residentName.toLowerCase().contains(lSearch);
+                boolean refMatch  = refNumber != null
+                    && refNumber.toLowerCase().contains(lSearch);
+                if (!nameMatch && !refMatch) continue;
+            }
+            if (!"All".equals(status) && !status.equalsIgnoreCase(payStatus)) continue;
+
+            rows.add(new PaymentRowData(paymentId, refNumber, residentName,
+                paymentType, amount, dateCreated, payStatus));
+        }
+
+        rs.close();
+        stmt.close();
+        conn.close();
+        return rows;
+    }
+
+    // =========================================================================
+    //  RENDER BATCH – always called on FX thread, no nested Platform.runLater
+    // =========================================================================
+    private void renderBatch() {
+        if (isRendering.get()) return;
+        isRendering.set(true);
+
+        removeScrollFooter();
+
+        int start = rowsDisplayed;
+        int end   = Math.min(start + BATCH_SIZE,
+                    Math.min(cachedRows.size(), TOTAL_DISPLAY_LIMIT));
+
+        for (int i = start; i < end; i++) {
+            paymentsTableBody.getChildren().add(createPaymentRow(cachedRows.get(i)));
+        }
+        rowsDisplayed = end;
+
+        if (rowsDisplayed < cachedRows.size() && rowsDisplayed < TOTAL_DISPLAY_LIMIT) {
+            addScrollFooter();
+        }
+
+        isRendering.set(false);
+    }
+
+    // =========================================================================
+    //  LOAD MORE (triggered by scroll debounce)
+    // =========================================================================
+    private void loadMoreBatch() {
+        if (isRendering.get()) return;
+        if (rowsDisplayed >= cachedRows.size()) return;
+        if (rowsDisplayed >= TOTAL_DISPLAY_LIMIT) return;
+        renderBatch();
+    }
+
+    // ── Scroll footer helpers ─────────────────────────────────────────────────
+    private static final String SCROLL_FOOTER_ID = "scrollFooter";
+
+    private void addScrollFooter() {
+        Label lbl = new Label("💳 Scroll down to load more…");
+        lbl.setStyle(
+            "-fx-font-size: 11px; -fx-text-fill: #aaaaaa;" +
+            "-fx-padding: 16; -fx-alignment: CENTER;");
+        HBox box = new HBox(lbl);
+        box.setId(SCROLL_FOOTER_ID);
+        box.setStyle("-fx-alignment: CENTER; -fx-padding: 10;");
+        paymentsTableBody.getChildren().add(box);
+    }
+
+    private void removeScrollFooter() {
+        paymentsTableBody.getChildren()
+            .removeIf(n -> SCROLL_FOOTER_ID.equals(n.getId()));
+    }
+
+    // ── Top Bar ───────────────────────────────────────────────────────────────
     private void loadTopBar() {
         String name = SessionManager.getName();
         String role = SessionManager.getRole();
@@ -69,11 +305,7 @@ public class PaymentsController {
     private void loadAvatarPicture() {
         ProfilePictureManager.loadAvatarPicture(
             SessionManager.getEmail(),
-            avatarBox,
-            avatarCircle,
-            profileImageView,
-            avatarInitialLabel
-        );
+            avatarBox, avatarCircle, profileImageView, avatarInitialLabel);
     }
 
     private String capitalize(String s) {
@@ -81,7 +313,9 @@ public class PaymentsController {
         return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     }
 
-    // ── Auto Refresh ──────────────────────────────────────────────────────────────
+    // =========================================================================
+    //  AUTO REFRESH
+    // =========================================================================
     private void startAutoRefresh() {
         autoRefresh = new Timeline(new KeyFrame(Duration.seconds(5), e ->
             checkAndUpdatePendingPayments()));
@@ -90,201 +324,343 @@ public class PaymentsController {
     }
 
     private void checkAndUpdatePendingPayments() {
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            ResultSet rs = conn.prepareStatement(
-                "SELECT payment_id, ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
-            ).executeQuery();
-            boolean anyUpdated = false;
-            while (rs.next()) {
-                String paymentId = rs.getString("payment_id");
-                String refNumber = rs.getString("ref_number");
-                try {
-                    String status = PayMongoService.checkPaymentStatus(paymentId);
-                    if (status.equals("paid")) {
-                        updatePaymentStatus(refNumber, "Paid");
-                        anyUpdated = true;
+        // Run DB + PayMongo checks on a background thread so the FX thread is never blocked
+        executorService.execute(() -> {
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                ResultSet rs = conn.prepareStatement(
+                    "SELECT payment_id, ref_number, amount FROM payments " +
+                    "WHERE status = 'Pending' AND archived = 0"
+                ).executeQuery();
+
+                List<String> updatedRefs = new ArrayList<>();
+                while (rs.next()) {
+                    String sessionId = rs.getString("payment_id");
+                    String refNumber = rs.getString("ref_number");
+                    try {
+                        String status = PayMongoService.checkPaymentStatus(sessionId);
+                        System.out.println("🔍 Checking " + refNumber + " → Status: " + status);
+                        if ("paid".equals(status)) {
+                            updatePaymentStatus(refNumber, "Paid");
+                            System.out.println("✅ Payment " + refNumber + " marked as Paid!");
+                            updatedRefs.add(refNumber);
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("⚠️ Error checking " + refNumber + ": " + ex.getMessage());
                     }
-                } catch (Exception ignored) {}
-            }
-            rs.close(); conn.close();
-            if (anyUpdated) {
-                Platform.runLater(() -> {
-                    loadPayments(searchField.getText().trim(), filterStatus.getValue());
-                    loadSummary();
-                    syncNotifications();
-                    refreshAlertBadge();
-                });
-            }
-        } catch (Exception e) { e.printStackTrace(); }
+                }
+                rs.close();
+                conn.close();
+
+                if (!updatedRefs.isEmpty()) {
+                    Platform.runLater(() -> {
+                        // ── In-place cache update: patch only the rows that changed ──────
+                        // This avoids a full loadPayments() reset which destroys the batch
+                        // state (rowsDisplayed → 0) and re-renders all 100 rows every 5 s.
+                        boolean cachePatched = false;
+                        for (String ref : updatedRefs) {
+                            for (int i = 0; i < cachedRows.size(); i++) {
+                                if (ref.equals(cachedRows.get(i).refNumber)) {
+                                    PaymentRowData old = cachedRows.get(i);
+                                    cachedRows.set(i, new PaymentRowData(
+                                        old.paymentId, old.refNumber, old.residentName,
+                                        old.paymentType, old.amount, old.dateCreated, "Paid"));
+                                    cachePatched = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (cachePatched) {
+                            removeScrollFooter();
+                            int visibleCount = Math.min(rowsDisplayed, cachedRows.size());
+                            paymentsTableBody.getChildren().clear();
+                            for (int i = 0; i < visibleCount; i++) {
+                                paymentsTableBody.getChildren().add(createPaymentRow(cachedRows.get(i)));
+                            }
+                            if (rowsDisplayed < cachedRows.size() && rowsDisplayed < TOTAL_DISPLAY_LIMIT) {
+                                addScrollFooter();
+                            }
+                        }
+
+                        loadSummary();
+                        syncNotifications();
+                        refreshAlertBadge();
+                    });
+                }
+            } catch (Exception e) { e.printStackTrace(); }
+        });
     }
 
-    // ── Summary ───────────────────────────────────────────────────────────────────
+    // =========================================================================
+    //  SUMMARY
+    // =========================================================================
     private void loadSummary() {
         try {
             Connection conn = DatabaseConnection.getConnection();
+
             ResultSet rs1 = conn.prepareStatement(
                 "SELECT SUM(amount) FROM payments WHERE status = 'Paid'"
             ).executeQuery();
-            if (rs1.next())
-                totalCollectedLabel.setText(String.format("₱%.2f", rs1.getDouble(1)));
+            if (rs1.next()) {
+                double total = rs1.getDouble(1);
+                totalCollectedLabel.setText(total > 0
+                    ? String.format("₱%.2f", total) : "₱0.00");
+            }
             rs1.close();
+
             ResultSet rs2 = conn.prepareStatement(
-                "SELECT COUNT(*) FROM payments WHERE status = 'Pending' AND archived = False"
+                "SELECT COUNT(*) FROM payments WHERE status = 'Pending' AND archived = 0"
             ).executeQuery();
             if (rs2.next()) pendingCountLabel.setText(String.valueOf(rs2.getInt(1)));
             rs2.close();
+
             ResultSet rs3 = conn.prepareStatement(
                 "SELECT COUNT(*) FROM payments WHERE status = 'Paid'"
             ).executeQuery();
             if (rs3.next()) paidCountLabel.setText(String.valueOf(rs3.getInt(1)));
             rs3.close();
+
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // ── Load Payments ─────────────────────────────────────────────────────────────
-    private void loadPayments(String search, String status) {
-        paymentsTableBody.getChildren().clear();
+    // =========================================================================
+    //  ROW BUILDER – full-width table row matching Documents controller style
+    // =========================================================================
+    private HBox createPaymentRow(PaymentRowData payment) {
+        HBox row = new HBox();
+        row.setStyle("-fx-padding: 14 16; -fx-border-color: #f8f8f8;" +
+                     "-fx-border-width: 0 0 1 0; -fx-background-color: transparent;");
+        row.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(row, Priority.ALWAYS);
+
+        // ✅ REF NUMBER - Fixed width
+        Label refLabel = new Label(payment.refNumber != null ? payment.refNumber : "—");
+        refLabel.setPrefWidth(110);
+        refLabel.setMinWidth(110);
+        refLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+
+        // ✅ RESIDENT NAME - Fixed width, bold
+        Label nameLabel = new Label(payment.residentName != null ? payment.residentName : "—");
+        nameLabel.setPrefWidth(160);
+        nameLabel.setMinWidth(160);
+        nameLabel.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+
+        // ✅ PAYMENT TYPE - Fixed width
+        Label typeLabel = new Label(payment.paymentType != null ? payment.paymentType : "—");
+        typeLabel.setPrefWidth(200);
+        typeLabel.setMinWidth(200);
+        typeLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+
+        // ✅ AMOUNT - Fixed width, bold
+        Label amountLabel = new Label(String.format("₱%.2f", payment.amount));
+        amountLabel.setPrefWidth(110);
+        amountLabel.setMinWidth(110);
+        amountLabel.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
+
+        // ✅ DATE - Fixed width
+        Label dateLabel = new Label(payment.dateCreated != null ? payment.dateCreated : "N/A");
+        dateLabel.setPrefWidth(160);
+        dateLabel.setMinWidth(160);
+        dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+
+        // ✅ STATUS BADGE - Fixed width
+        String statusBg, statusFg;
+        if ("Paid".equals(payment.payStatus)) {
+            statusBg = "#c8e6c9"; statusFg = "#2e7d32";
+        } else {
+            statusBg = "#fff9c4"; statusFg = "#f57f17";
+        }
+
+        Label statusLabel = new Label(payment.payStatus != null ? payment.payStatus : "Pending");
+        statusLabel.setStyle(
+            "-fx-background-color: " + statusBg + ";" +
+            "-fx-text-fill: " + statusFg + ";" +
+            "-fx-font-size: 11px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 4; -fx-padding: 4 10;");
+        HBox statusBox = new HBox(statusLabel);
+        statusBox.setPrefWidth(90);
+        statusBox.setMinWidth(90);
+        statusBox.setAlignment(Pos.CENTER_LEFT);
+
+        // ✅ ACTION BOX - GROWS to fill remaining space (FULL WIDTH EFFECT)
+        HBox actionBox = new HBox(6);
+        HBox.setHgrow(actionBox, Priority.ALWAYS);
+        actionBox.setStyle("-fx-alignment: CENTER_LEFT; -fx-padding: 0 10;");
+
+        final String fPaymentId = payment.paymentId;
+        final String fRefNumber = payment.refNumber;
+
+        if ("Pending".equals(payment.payStatus)) {
+            Button viewBtn = new Button("View Payment");
+            viewBtn.setStyle(
+                "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+                "-fx-font-size: 11px; -fx-background-radius: 6;" +
+                "-fx-padding: 6 14; -fx-cursor: hand;");
+            viewBtn.setOnAction(e -> openPaymentLink(fPaymentId, fRefNumber));
+            actionBox.getChildren().add(viewBtn);
+        } else {
+            Label paidLabel = new Label("✓ Paid");
+            paidLabel.setStyle(
+                "-fx-font-size: 11px; -fx-text-fill: #2e7d32; -fx-padding: 0 8;");
+            Button archiveBtn = new Button("Archive");
+            archiveBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-background-radius: 6;" +
+                "-fx-padding: 6 14; -fx-cursor: hand;");
+            archiveBtn.setOnAction(e -> archivePayment(fRefNumber));
+            actionBox.getChildren().addAll(paidLabel, archiveBtn);
+        }
+
+        // ✅ ADD ALL COLUMNS IN ORDER (LEFT TO RIGHT)
+        row.getChildren().addAll(
+            refLabel, nameLabel, typeLabel, amountLabel,
+            dateLabel, statusBox, actionBox);
+
+        return row;
+    }
+
+    // =========================================================================
+    //  PAYMENT ACTIONS
+    // =========================================================================
+    private void openPaymentLink(String sessionId, String refNumber) {
         try {
-            Connection conn = DatabaseConnection.getConnection();
-            ResultSet rs = conn.prepareStatement(
-                "SELECT * FROM payments WHERE archived = False ORDER BY ID DESC"
-            ).executeQuery();
-            boolean hasData = false;
-
-            while (rs.next()) {
-                String paymentId    = rs.getString("payment_id");
-                String refNumber    = rs.getString("ref_number");
-                String residentName = rs.getString("resident_name");
-                String paymentType  = rs.getString("payment_type");
-                double amount       = rs.getDouble("amount");
-                String dateCreated  = rs.getString("date_created");
-                String payStatus    = rs.getString("status");
-
-                if (!search.isEmpty()) {
-                    if (!residentName.toLowerCase().contains(search.toLowerCase()) &&
-                        !refNumber.toLowerCase().contains(search.toLowerCase())) continue;
-                }
-                if (!status.equals("All") && !payStatus.equals(status)) continue;
-
-                hasData = true;
-                HBox row = new HBox();
-                row.setStyle("-fx-padding: 14 0; -fx-border-color: #f8f8f8;" +
-                    "-fx-border-width: 0 0 1 0;");
-
-                Label refLabel = new Label(refNumber);
-                refLabel.setPrefWidth(120);
-                refLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-
-                Label nameLabel = new Label(residentName);
-                nameLabel.setPrefWidth(200);
-                nameLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
-
-                Label typeLabel = new Label(paymentType);
-                typeLabel.setPrefWidth(180);
-                typeLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-
-                Label amountLabel = new Label(String.format("₱%.2f", amount));
-                amountLabel.setPrefWidth(120);
-                amountLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
-
-                Label dateLabel = new Label(dateCreated != null ? dateCreated : "N/A");
-                dateLabel.setPrefWidth(140);
-                dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-
-                String statusBg = "Paid".equals(payStatus) ? "#e8f5e9" : "#fff8e1";
-                String statusFg = "Paid".equals(payStatus) ? "#4caf50" : "#f59e0b";
-                Label statusLabel = new Label(payStatus);
-                statusLabel.setStyle(
-                    "-fx-background-color: " + statusBg + ";" +
-                    "-fx-text-fill: " + statusFg + ";" +
-                    "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                    "-fx-background-radius: 4; -fx-padding: 3 8;");
-                HBox statusBox = new HBox(statusLabel);
-                statusBox.setPrefWidth(120);
-                statusBox.setAlignment(Pos.CENTER_LEFT);
-
-                HBox actionBox = new HBox(6);
-                actionBox.setPrefWidth(180);
-                actionBox.setAlignment(Pos.CENTER_LEFT);
-
-                final String fPaymentId = paymentId;
-                final String fRefNumber = refNumber;
-
-                if ("Pending".equals(payStatus)) {
-                    Button viewBtn = new Button("View Payment");
-                    viewBtn.setStyle(
-                        "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
-                        "-fx-font-size: 11px; -fx-background-radius: 6;" +
-                        "-fx-padding: 5 10; -fx-cursor: hand;");
-                    viewBtn.setOnAction(e -> openPaymentLink(fPaymentId, fRefNumber));
-                    actionBox.getChildren().add(viewBtn);
-                } else {
-                    Label paidLabel = new Label("✓ Paid");
-                    paidLabel.setStyle(
-                        "-fx-font-size: 11px; -fx-text-fill: #4caf50; -fx-padding: 0 8 0 0;");
-                    Button archiveBtn = new Button("Archive");
-                    archiveBtn.setStyle(
-                        "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
-                        "-fx-font-size: 11px; -fx-background-radius: 6;" +
-                        "-fx-padding: 5 10; -fx-cursor: hand;");
-                    archiveBtn.setOnAction(e -> archivePayment(fRefNumber));
-                    actionBox.getChildren().addAll(paidLabel, archiveBtn);
-                }
-
-                row.getChildren().addAll(
-                    refLabel, nameLabel, typeLabel, amountLabel,
-                    dateLabel, statusBox, actionBox);
-                paymentsTableBody.getChildren().add(row);
+            if (sessionId == null || sessionId.isEmpty()) {
+                System.out.println("⚠️ No PayMongo session ID found. Creating new link for: " + refNumber);
+                createPayMongoLinkForPayment(refNumber);
+                return;
             }
 
-            if (!hasData) {
-                Label empty = new Label("No payments found.");
-                empty.setStyle(
-                    "-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;");
-                VBox.setMargin(empty, new Insets(20, 0, 20, 0));
-                paymentsTableBody.getChildren().add(empty);
+            String status = PayMongoService.checkPaymentStatus(sessionId);
+            System.out.println("👁 View Payment: " + refNumber + " → " + status);
+
+            if ("paid".equals(status)) {
+                updatePaymentStatus(refNumber, "Paid");
+                loadPayments(currentSearch, currentStatus);
+                loadSummary();
+                Alert success = new Alert(Alert.AlertType.INFORMATION);
+                success.setTitle("Payment Confirmed");
+                success.setHeaderText("Payment for " + refNumber);
+                success.setContentText("✅ Payment has been successfully confirmed!");
+                success.showAndWait();
+            } else {
+                String checkoutUrl = PayMongoService.getCheckoutUrl(sessionId);
+                Alert info = new Alert(Alert.AlertType.INFORMATION);
+                info.setTitle("Payment Pending");
+                info.setHeaderText("Payment for " + refNumber);
+                info.setContentText("Status: " + status +
+                    "\nOpening checkout page for the resident...");
+                info.showAndWait();
+                if (checkoutUrl != null && !checkoutUrl.isEmpty()) {
+                    System.out.println("🔗 Checkout URL: " + checkoutUrl);
+                    java.awt.Desktop.getDesktop().browse(new java.net.URI(checkoutUrl));
+                }
+                loadPayments(searchField.getText().trim(), filterStatus.getValue());
+                loadSummary();
             }
-            rs.close(); conn.close();
         } catch (Exception e) {
             e.printStackTrace();
-            Label error = new Label("Error loading payments: " + e.getMessage());
-            error.setStyle("-fx-font-size: 12px; -fx-text-fill: #e53935;");
-            paymentsTableBody.getChildren().add(error);
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setTitle("Error");
+            error.setHeaderText("Could not check payment");
+            error.setContentText(e.getMessage());
+            error.showAndWait();
         }
     }
 
-    private void openPaymentLink(String paymentId, String refNumber) {
+    private void createPayMongoLinkForPayment(String refNumber) {
         try {
-            String status = PayMongoService.checkPaymentStatus(paymentId);
-            if (status.equals("paid")) {
-                updatePaymentStatus(refNumber, "Paid");
+            Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT p.payment_type, p.amount FROM payments WHERE ref_number = ?");
+            stmt.setString(1, refNumber);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String paymentType = rs.getString("payment_type");
+                double amount      = rs.getDouble("amount");
+
+                String result      = PayMongoService.createPaymentLink(
+                    refNumber, paymentType, (int)(amount * 100));
+                String[] parts     = result.split("\\|");
+                String checkoutUrl = parts[0];
+                String sessionId   = parts[1];
+
+                PreparedStatement updateStmt = conn.prepareStatement(
+                    "UPDATE payments SET payment_id = ? WHERE ref_number = ?");
+                updateStmt.setString(1, sessionId);
+                updateStmt.setString(2, refNumber);
+                updateStmt.executeUpdate();
+                updateStmt.close();
+
+                rs.close(); stmt.close(); conn.close();
+
+                java.awt.Desktop.getDesktop().browse(new java.net.URI(checkoutUrl));
+                loadPayments(currentSearch, currentStatus);
+                loadSummary();
+
+                Alert success = new Alert(Alert.AlertType.INFORMATION);
+                success.setTitle("Checkout Link Opened");
+                success.setHeaderText("Payment: " + refNumber);
+                success.setContentText("✅ Checkout page opened in browser!\nLink: " + checkoutUrl);
+                success.showAndWait();
             } else {
-                Alert info = new Alert(Alert.AlertType.INFORMATION);
-                info.setTitle("Payment Status");
-                info.setHeaderText("Payment for " + refNumber);
-                info.setContentText(
-                    "Status: " + status + "\nThe resident has not completed payment yet.");
-                info.showAndWait();
+                rs.close(); stmt.close(); conn.close();
+                Alert error = new Alert(Alert.AlertType.ERROR);
+                error.setTitle("Error");
+                error.setContentText("Payment not found: " + refNumber);
+                error.showAndWait();
             }
-            loadPayments(searchField.getText().trim(), filterStatus.getValue());
-            loadSummary();
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setTitle("Error");
+            error.setHeaderText("Could not create payment link");
+            error.setContentText(e.getMessage());
+            error.showAndWait();
+        }
     }
 
     private void updatePaymentStatus(String refNumber, String newStatus) {
         try {
             Connection conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(true);
+
+            PreparedStatement getDocStmt = conn.prepareStatement(
+                "SELECT p.request_id, d.document_type FROM payments p " +
+                "LEFT JOIN document_requests d ON p.request_id = d.request_id " +
+                "WHERE p.ref_number = ?");
+            getDocStmt.setString(1, refNumber);
+            ResultSet rs = getDocStmt.executeQuery();
+            String documentType = null;
+            if (rs.next()) documentType = rs.getString("document_type");
+            rs.close(); getDocStmt.close();
+
             PreparedStatement stmt = conn.prepareStatement(
                 "UPDATE payments SET status = ? WHERE ref_number = ?");
             stmt.setString(1, newStatus);
             stmt.setString(2, refNumber);
             stmt.executeUpdate();
-            stmt.close(); conn.close();
+            stmt.close();
+
+            if (documentType != null && !documentType.isEmpty()) {
+                PreparedStatement syncStmt = conn.prepareStatement(
+                    "UPDATE payments SET payment_type = ? WHERE ref_number = ?");
+                syncStmt.setString(1, documentType);
+                syncStmt.setString(2, refNumber);
+                syncStmt.executeUpdate();
+                syncStmt.close();
+                System.out.println("✅ payment_type synced to: " + documentType);
+            }
+
+            conn.close();
+            System.out.println("✅ Payment status updated to: " + newStatus);
+
         } catch (Exception e) { e.printStackTrace(); }
     }
 
@@ -292,65 +668,182 @@ public class PaymentsController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE payments SET archived = True WHERE ref_number = ?");
+                "UPDATE payments SET archived = 1 WHERE ref_number = ?");
             stmt.setString(1, refNumber);
             stmt.executeUpdate();
-            stmt.close(); conn.close();
-            loadPayments(searchField.getText().trim(), filterStatus.getValue());
+            stmt.close();
+            conn.close();
+            loadPayments(currentSearch, currentStatus);
             loadSummary();
         } catch (Exception e) { e.printStackTrace(); }
     }
 
+    // =========================================================================
+    //  CREATE PAYMENT MODAL
+    // =========================================================================
     @FXML
     private void createTestPayment() {
+        Stage paymentStage = new Stage();
+        paymentStage.initModality(Modality.APPLICATION_MODAL);
+        paymentStage.initOwner(logoutButton.getScene().getWindow());
+        paymentStage.setTitle("Create Payment");
+        paymentStage.setResizable(false);
+
+        VBox root = new VBox(0);
+        root.setStyle("-fx-background-color: #ffffff; -fx-min-width: 400;");
+
+        VBox header = new VBox(4);
+        header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 20 24;");
+        Label titleLbl = new Label("Create Payment");
+        titleLbl.setStyle(
+            "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+        Label subLbl = new Label("Select resident and document type");
+        subLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        header.getChildren().addAll(titleLbl, subLbl);
+
+        VBox body = new VBox(16);
+        body.setStyle("-fx-padding: 24;");
+
+        Label residentLabel = new Label("Select Resident:");
+        residentLabel.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+        ComboBox<String> residentCombo = new ComboBox<>();
+        residentCombo.setStyle(
+            "-fx-font-size: 12px; -fx-padding: 8 12; -fx-background-color: #f4f4f4;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;");
+        residentCombo.setPrefWidth(Double.MAX_VALUE);
+
         try {
-            String result = PayMongoService.createPaymentLink("REQ-001", "Clearance", 10000);
-            String[] parts = result.split("\\|");
-            String checkoutUrl = parts[0];
-            String linkId = parts[1];
-
             Connection conn = DatabaseConnection.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(
-                "INSERT INTO payments (payment_id, ref_number, resident_name, " +
-                "payment_type, amount, status, date_created, archived) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, False)");
-            stmt.setString(1, linkId);
-            stmt.setString(2, "REQ-001");
-            stmt.setString(3, "Maria Santos");
-            stmt.setString(4, "Clearance");
-            stmt.setDouble(5, 100.00);
-            stmt.setString(6, "Pending");
-            stmt.setString(7, LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            stmt.executeUpdate();
-            stmt.close(); conn.close();
+            ResultSet rs = conn.prepareStatement(
+                "SELECT id, full_name FROM residents ORDER BY full_name"
+            ).executeQuery();
+            while (rs.next())
+                residentCombo.getItems().add(
+                    rs.getString("id") + "|" + rs.getString("full_name"));
+            rs.close(); conn.close();
+        } catch (Exception e) { e.printStackTrace(); }
 
-            loadPayments("", "All");
-            loadSummary();
+        Label typeLabel = new Label("Document Type:");
+        typeLabel.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+        ComboBox<String> typeCombo = new ComboBox<>();
+        typeCombo.setStyle(
+            "-fx-font-size: 12px; -fx-padding: 8 12; -fx-background-color: #f4f4f4;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;");
+        typeCombo.setPrefWidth(Double.MAX_VALUE);
+        typeCombo.getItems().addAll(
+            "Barangay Clearance", "Certificate of Residency", "Certificate of Indigency");
 
-            Alert info = new Alert(Alert.AlertType.INFORMATION);
-            info.setTitle("Test Payment Created");
-            info.setHeaderText("PayMongo checkout will open after you click OK");
-            info.setContentText(
-                "Use test card:\n" +
-                "Card: 4343 4343 4343 4343\n" +
-                "Expiry: Any future date\n" +
-                "CVV: Any 3 digits\n\n" +
-                "The status will auto-update once payment is completed.\n\n" +
-                "Click OK to open the payment page in your browser.");
-            info.showAndWait();
-            java.awt.Desktop.getDesktop().browse(new java.net.URI(checkoutUrl));
-        } catch (Exception e) {
-            e.printStackTrace();
-            Alert error = new Alert(Alert.AlertType.ERROR);
-            error.setTitle("Error");
-            error.setHeaderText("Failed to create test payment");
-            error.setContentText(e.getMessage());
-            error.showAndWait();
-        }
+        Label amountLabel = new Label("Amount (₱):");
+        amountLabel.setStyle(
+            "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+        TextField amountField = new TextField("100.00");
+        amountField.setPromptText("Enter amount");
+        amountField.setStyle(
+            "-fx-font-size: 12px; -fx-padding: 8 12; -fx-background-color: #f4f4f4;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;");
+        amountField.setPrefWidth(Double.MAX_VALUE);
+
+        body.getChildren().addAll(
+            residentLabel, residentCombo,
+            typeLabel, typeCombo,
+            amountLabel, amountField);
+
+        HBox footer = new HBox(10);
+        footer.setStyle(
+            "-fx-padding: 16 24; -fx-alignment: CENTER_RIGHT;" +
+            "-fx-border-color: #f0f0f0; -fx-border-width: 1 0 0 0;");
+
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setStyle(
+            "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+            "-fx-font-size: 12px; -fx-background-radius: 6;" +
+            "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
+            "-fx-padding: 10 20; -fx-cursor: hand;");
+        cancelBtn.setOnAction(e -> paymentStage.close());
+
+        Button createBtn = new Button("Create Payment");
+        createBtn.setStyle(
+            "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
+            "-fx-font-size: 12px; -fx-font-weight: bold;" +
+            "-fx-background-radius: 6; -fx-padding: 10 24; -fx-cursor: hand;");
+
+        createBtn.setOnAction(e -> {
+            if (residentCombo.getValue() == null || typeCombo.getValue() == null) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Validation Error");
+                alert.setHeaderText("Missing Information");
+                alert.setContentText("Please select a resident and document type.");
+                alert.showAndWait();
+                return;
+            }
+            try {
+                String[] residentParts = residentCombo.getValue().split("\\|");
+                String residentId      = residentParts[0];
+                String docType         = typeCombo.getValue();
+                double amount          = Double.parseDouble(amountField.getText());
+
+                Connection conn = DatabaseConnection.getConnection();
+
+                ResultSet rs = conn.prepareStatement(
+                    "SELECT MAX(CAST(SUBSTR(ref_number, 4) AS INTEGER)) AS max_num " +
+                    "FROM payments WHERE ref_number LIKE 'REF%'"
+                ).executeQuery();
+                int nextNum = 1;
+                if (rs.next() && rs.getInt("max_num") > 0)
+                    nextNum = rs.getInt("max_num") + 1;
+                rs.close();
+
+                String refNumber   = String.format("REF%05d", nextNum);
+                String result      = PayMongoService.createPaymentLink(
+                                         refNumber, docType, (int)(amount * 100));
+                String[] parts     = result.split("\\|");
+                String checkoutUrl = parts[0];
+                String sessionId   = parts[1];
+
+                PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO payments " +
+                    "(payment_id, ref_number, payment_type, amount, status, date_created, archived, resident_id) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                stmt.setString(1, sessionId);
+                stmt.setString(2, refNumber);
+                stmt.setString(3, docType);
+                stmt.setDouble(4, amount);
+                stmt.setString(5, "Pending");
+                stmt.setString(6, LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                stmt.setInt(7, 0);
+                stmt.setString(8, residentId);
+                stmt.executeUpdate();
+                stmt.close();
+                conn.close();
+
+                loadPayments("", "All");
+                loadSummary();
+                paymentStage.close();
+
+                java.awt.Desktop.getDesktop().browse(new java.net.URI(checkoutUrl));
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Alert error = new Alert(Alert.AlertType.ERROR);
+                error.setTitle("Error");
+                error.setHeaderText("Failed to create payment");
+                error.setContentText(ex.getMessage());
+                error.showAndWait();
+            }
+        });
+
+        footer.getChildren().addAll(cancelBtn, createBtn);
+        root.getChildren().addAll(header, body, footer);
+        paymentStage.setScene(new Scene(root));
+        paymentStage.showAndWait();
     }
 
-    // ── Notifications ─────────────────────────────────────────────────────────────
+    // =========================================================================
+    //  NOTIFICATIONS
+    // =========================================================================
     private void cleanupNotifications() {
         String email = SessionManager.getEmail();
         if (email == null) return;
@@ -370,8 +863,7 @@ public class PaymentsController {
             PreparedStatement s3 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'payment' " +
                 "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
+                "(SELECT ref_number FROM payments WHERE status = 'Pending' AND archived = 0)");
             s3.setString(1, email); s3.executeUpdate(); s3.close();
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
@@ -385,35 +877,31 @@ public class PaymentsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+                "SELECT ref_number FROM payments WHERE status = 'Pending' AND archived = 0"
             ).executeQuery();
-            while (rs1.next()) {
-                String refNo = rs1.getString("ref_number");
+            while (rs1.next())
                 insertIfNew(conn, "payment",
-                    "Pending payment from " + rs1.getString("resident_name") +
-                    " (" + refNo + ")", refNo, email);
-            }
+                    "Pending payment " + rs1.getString("ref_number"),
+                    rs1.getString("ref_number"), email);
             rs1.close();
             ResultSet rs2 = conn.prepareStatement(
                 "SELECT complaint_id, complainant_name, incident_type " +
                 "FROM complaints WHERE status <> 'Resolved'"
             ).executeQuery();
-            while (rs2.next()) {
-                String cid = rs2.getString("complaint_id");
+            while (rs2.next())
                 insertIfNew(conn, "complaint",
                     "Open complaint: " + rs2.getString("incident_type") +
-                    " by " + rs2.getString("complainant_name"), cid, email);
-            }
+                    " by " + rs2.getString("complainant_name"),
+                    rs2.getString("complaint_id"), email);
             rs2.close();
             ResultSet rs3 = conn.prepareStatement(
                 "SELECT announcement_id, title FROM announcements ORDER BY id DESC"
             ).executeQuery();
             int aCount = 0;
             while (rs3.next() && aCount < 5) {
-                String aid = rs3.getString("announcement_id");
                 insertIfNew(conn, "announcement",
-                    "Announcement posted: " + rs3.getString("title"), aid, email);
+                    "Announcement posted: " + rs3.getString("title"),
+                    rs3.getString("announcement_id"), email);
                 aCount++;
             }
             rs3.close();
@@ -421,9 +909,8 @@ public class PaymentsController {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private void insertIfNew(Connection conn, String type,
-                              String message, String refId,
-                              String email) throws Exception {
+    private void insertIfNew(Connection conn, String type, String message,
+                              String refId, String email) throws Exception {
         PreparedStatement check = conn.prepareStatement(
             "SELECT notif_id FROM notifications " +
             "WHERE reference_id = ? AND user_email = ? AND type = ?");
@@ -450,7 +937,8 @@ public class PaymentsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = 'true' WHERE notif_id = ?");
+            stmt.setString(1, notifId);
             stmt.executeUpdate(); stmt.close(); conn.close();
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -462,8 +950,7 @@ public class PaymentsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
+                "SELECT COUNT(*) FROM notifications WHERE user_email = ? AND is_read = 'false'");
             stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
@@ -477,7 +964,9 @@ public class PaymentsController {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // ── Alerts Popup ──────────────────────────────────────────────────────────────
+    // =========================================================================
+    //  ALERTS POPUP
+    // =========================================================================
     @FXML
     private void handleAlertsClick() {
         Stage alertStage = new Stage();
@@ -543,11 +1032,11 @@ public class PaymentsController {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT * FROM notifications WHERE user_email = ? ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_email = ? AND is_read = 'false' ORDER BY notif_id DESC";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, email);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
@@ -556,7 +1045,7 @@ public class PaymentsController {
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
                     empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
@@ -631,9 +1120,9 @@ public class PaymentsController {
         if (dateStr != null && dateStr.length() > 16) dateStr = dateStr.substring(0, 16);
 
         String icon, bg;
-        if ("complaint".equals(type))    { icon = "📢"; bg = "#ffebee"; }
-        else if ("payment".equals(type)) { icon = "💳"; bg = "#fff8e1"; }
-        else                             { icon = "📣"; bg = "#e3f2fd"; }
+        if      ("complaint".equals(type)) { icon = "📢"; bg = "#ffebee"; }
+        else if ("payment".equals(type))   { icon = "💳"; bg = "#fff8e1"; }
+        else                               { icon = "📣"; bg = "#e3f2fd"; }
 
         HBox row = new HBox(14);
         row.setStyle(
@@ -785,26 +1274,23 @@ public class PaymentsController {
         detail.showAndWait();
     }
 
-    // ── Avatar Click ──────────────────────────────────────────────────────────────
-    @FXML
-    private void handleAvatarClick() {
+    // =========================================================================
+    //  FXML HANDLERS
+    // =========================================================================
+    @FXML private void handleAvatarClick() {
         if (autoRefresh != null) autoRefresh.stop();
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
     }
 
-    // ── Search / Filter ───────────────────────────────────────────────────────────
-    @FXML
-    private void handleSearch() {
+    @FXML private void handleSearch() {
         loadPayments(searchField.getText().trim(), filterStatus.getValue());
     }
 
-    @FXML
-    private void handleFilter() {
+    @FXML private void handleFilter() {
         loadPayments(searchField.getText().trim(), filterStatus.getValue());
     }
 
-    // ── Navigation ────────────────────────────────────────────────────────────────
     @FXML private void goToDashboard() {
         if (autoRefresh != null) autoRefresh.stop();
         Stage stage = (Stage) logoutButton.getScene().getWindow();

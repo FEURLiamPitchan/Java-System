@@ -19,13 +19,15 @@ public class CertificateGenerator {
     private static final String OUTPUT_PATH = "generated_certificates/";
 
     private static String getTemplateFile(String documentType) {
-        if ("Certificate of Residency".equalsIgnoreCase(documentType)) {
+        if (documentType == null) return null;
+        
+        if (documentType.toLowerCase().contains("residency")) {
             return "CertificateOfResidency.pdf";
         }
-        else if ("Barangay Clearance".equalsIgnoreCase(documentType)) {
+        else if (documentType.toLowerCase().contains("clearance")) {
             return "Barangay Clearance.pdf";
         }
-        else if ("Certificate of Indigency".equalsIgnoreCase(documentType)) {
+        else if (documentType.toLowerCase().contains("indigency")) {
             return "CertificateOfIndigency.pdf";
         }
         return null;
@@ -34,7 +36,7 @@ public class CertificateGenerator {
     public static String generateCertificate(String documentType, String requestId, 
                                              String fullName, int age, String address, 
                                              String yearsResidency, String purpose,
-                                             String occupationOrIncome,
+                                             String monthlyIncome,
                                              String barangayCity,
                                              String barangayProvince,
                                              String orNumber) {
@@ -87,15 +89,16 @@ public class CertificateGenerator {
                 System.out.println("   - " + name);
             }
             
-            if ("Certificate of Residency".equalsIgnoreCase(documentType)) {
+            // Check document type by content, not exact name match
+            if (documentType.toLowerCase().contains("residency")) {
                 fillResidencyCertificate(form, fullName, age, address, yearsResidency, purpose, barangayCity, barangayProvince, orNumber);
             } 
-            else if ("Barangay Clearance".equalsIgnoreCase(documentType)) {
-                fillClearanceCertificate(form, fullName, age, purpose, barangayProvince, orNumber);
+            else if (documentType.toLowerCase().contains("clearance")) {
+                fillClearanceCertificate(form, fullName, age, barangayProvince, purpose, barangayProvince, orNumber);
             } 
-            else if ("Certificate of Indigency".equalsIgnoreCase(documentType)) {
+            else if (documentType.toLowerCase().contains("indigency")) {
                 fillIndigencyCertificate(form, fullName, age, address, yearsResidency, 
-                                        occupationOrIncome, purpose, barangayCity, barangayProvince, orNumber);
+                                        monthlyIncome, purpose, barangayCity, barangayProvince, orNumber);
             }
             
             double fontSize = getFontSizeForDocType(documentType);
@@ -115,47 +118,43 @@ public class CertificateGenerator {
         }
     }
 
-    private static void fillResidencyCertificate(AcroFields form, String fullName, int age,
-                                                 String address, String yearsResidency, String purpose,
-                                                 String barangayCity, String barangayProvince, String orNumber) {
-        try {
-            System.out.println("📝 Filling Residency fields...");
-            
-            setFieldValueForce(form, "Text2", fullName);
-            setFieldValueForce(form, "Text3", address);
-            setFieldValueForce(form, "Text4", String.valueOf(age));
-            setFieldValueForce(form, "Text5", yearsResidency);
-            setFieldValueForce(form, "Text6", purpose);
-            
-            LocalDate today = LocalDate.now();
-            setFieldValueForce(form, "Text7", String.valueOf(today.getDayOfMonth()));
-            
-            DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM");
-            String month = today.format(monthFormatter);
-            String year = String.valueOf(today.getYear());
-            
-            setFieldValueForce(form, "Text8", month);
-            setFieldValueForce(form, "Text9", year);
-            
-            setFieldValueForce(form, "Text10", barangayCity);
-            setFieldValueForce(form, "Text11", barangayProvince);
-            
-            System.out.println("✅ Residency fields filled");
-            
-        } catch (Exception e) {
-            System.out.println("❌ Error: " + e.getMessage());
-            e.printStackTrace();
-        }
+private static void fillResidencyCertificate(AcroFields form, String fullName, int age,
+                                             String address, String yearsResidency, String purpose,
+                                             String barangayCity, String barangayProvince, String orNumber) {
+    try {
+        System.out.println("📝 Filling Residency fields...");
+        
+        setFieldValueForce(form, "Text1", fullName != null ? fullName : "");  
+        setFieldValueForce(form, "Text2", String.valueOf(age));               
+        setFieldValueForce(form, "Text3", address != null ? address : "");
+        setFieldValueForce(form, "Text4", yearsResidency != null ? yearsResidency : "");
+        setFieldValueForce(form, "Text5", purpose != null ? purpose : "");
+        setFieldValueForce(form, "Text6", String.valueOf(LocalDate.now().getDayOfMonth()));
+        
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM");
+        String month = LocalDate.now().format(monthFormatter);
+        String year = String.valueOf(LocalDate.now().getYear());
+        
+        setFieldValueForce(form, "Text7", month);
+        setFieldValueForce(form, "Text8", year);
+        setFieldValueForce(form, "Text9", barangayCity != null ? barangayCity : "");
+        setFieldValueForce(form, "Text10", barangayProvince != null ? barangayProvince : "");
+        
+        System.out.println("✅ Residency fields filled");
+        
+    } catch (Exception e) {
+        System.out.println("❌ Error: " + e.getMessage());
+        e.printStackTrace();
     }
-
+}
     private static void fillClearanceCertificate(AcroFields form, String fullName, int age, 
-                                                  String purpose, String barangayProvince, String orNumber) {
+                                                  String barangayProvince, String purpose, String barangayProvince2, String orNumber) {
         try {
             System.out.println("📝 Filling Clearance fields...");
             
-            setFieldValueForce(form, "Text1", fullName);
+            setFieldValueForce(form, "Text1", fullName != null ? fullName : "");
             setFieldValueForce(form, "Text2", String.valueOf(age));
-            setFieldValueForce(form, "Text3", purpose);
+            setFieldValueForce(form, "Text3", barangayProvince != null ? barangayProvince : "");
             
             LocalDate today = LocalDate.now();
             setFieldValueForce(form, "Text4", String.valueOf(today.getDayOfMonth()));
@@ -164,10 +163,10 @@ public class CertificateGenerator {
             String month = today.format(monthFormatter);
             
             setFieldValueForce(form, "Text5", month);
-            setFieldValueForce(form, "Text6", barangayProvince);
-            setFieldValueForce(form, "Text7", orNumber);
+            setFieldValueForce(form, "Text6", barangayProvince != null ? barangayProvince : "");
+            setFieldValueForce(form, "Text7", orNumber != null ? orNumber : "");
             
-            String dateIssued = today.format(DateTimeFormatter.ofPattern("MMMM dd"));
+            String dateIssued = today.format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"));
             setFieldValueForce(form, "Text8", dateIssued);
             
             System.out.println("✅ Clearance fields filled");
@@ -178,108 +177,111 @@ public class CertificateGenerator {
         }
     }
 
-    private static void fillIndigencyCertificate(AcroFields form, String fullName, int age, 
-                                               String address, String yearsResidency,
-                                               String occupationOrIncome, String purpose,
-                                               String barangayCity, String barangayProvince, String orNumber) {
-       try {
-           System.out.println("📝 Filling Indigency fields...");
+private static void fillIndigencyCertificate(AcroFields form, String fullName, int age, 
+                                           String address, String yearsResidency,
+                                           String monthlyIncome, String purpose,
+                                           String barangayCity, String barangayProvince, String orNumber) {
+   try {
+       System.out.println("📝 Filling Indigency fields...");
 
-           LocalDate today = LocalDate.now();
-           String month = today.format(DateTimeFormatter.ofPattern("MMMM"));
+       LocalDate today = LocalDate.now();
+       String month = today.format(DateTimeFormatter.ofPattern("MMMM"));
 
-           setFieldValueForce(form, "Text1", fullName);
-           setFieldValueForce(form, "Text2", String.valueOf(age));
-           setFieldValueForce(form, "Text3", barangayProvince);
-           setFieldValueForce(form, "Text4", address);
-           setFieldValueForce(form, "Text5", purpose);
-           setFieldValueForce(form, "Text6", String.valueOf(today.getDayOfMonth()));
-           setFieldValueForce(form, "Text7", month);
-           setFieldValueForce(form, "Text8", barangayCity);
+       setFieldValueForce(form, "Text1", fullName != null ? fullName : "");
+       setFieldValueForce(form, "Text2", String.valueOf(age));
+       setFieldValueForce(form, "Text3", barangayProvince != null ? barangayProvince : "");
+       setFieldValueForce(form, "Text4", address != null ? address : "");
+       setFieldValueForce(form, "Text5", purpose != null ? purpose : "");
+       setFieldValueForce(form, "Text6", String.valueOf(today.getDayOfMonth()));
+       setFieldValueForce(form, "Text7", month);
+       setFieldValueForce(form, "Text8", barangayProvince != null ? barangayProvince : "");
 
-           System.out.println("✅ Indigency fields filled");
+       System.out.println("✅ Indigency fields filled");
 
-       } catch (Exception e) {
-           System.out.println("❌ Error: " + e.getMessage());
-           e.printStackTrace();
-       }
+   } catch (Exception e) {
+       System.out.println("❌ Error: " + e.getMessage());
+       e.printStackTrace();
    }
-    private static void setFieldValueForce(AcroFields form, String fieldName, String value) {
-        try {
-            form.setField(fieldName, value);
-            System.out.println("   ✓ " + fieldName + " = " + value);
-        } catch (Exception e) {
-            System.out.println("   ✗ Failed to set " + fieldName);
-        }
+}
+
+private static void setFieldValueForce(AcroFields form, String fieldName, String value) {
+    try {
+        form.setField(fieldName, value);
+        System.out.println("   ✓ " + fieldName + " = " + value);
+    } catch (Exception e) {
+        System.out.println("   ✗ Failed to set " + fieldName);
     }
+}
 
     private static double getFontSizeForDocType(String documentType) {
-        if ("Barangay Clearance".equalsIgnoreCase(documentType)) {
+        if (documentType == null) return 13.6;
+        
+        if (documentType.toLowerCase().contains("clearance")) {
             return 15.7;
         } 
-        else if ("Certificate of Residency".equalsIgnoreCase(documentType)) {
+        else if (documentType.toLowerCase().contains("residency")) {
             return 13.6;
         }
-        else if ("Certificate of Indigency".equalsIgnoreCase(documentType)) {
+        else if (documentType.toLowerCase().contains("indigency")) {
             return 13.6;
         }
         return 13.6;
     }
 
     private static void applyHarshModifications(AcroFields form, double fontSize) {
-    System.out.println("🔧 Applying formatting (Arial " + fontSize + ")...");
-    
-    for (String fieldName : form.getFields().keySet()) {
-        try {
-            AcroFields.Item item = form.getFieldItem(fieldName);
-            if (item != null) {
-                PdfDictionary field = item.getMerged(0);
-                if (field != null) {
-                    // Remove all styling
-                    field.remove(PdfName.BS);
-                    field.remove(PdfName.B);
-                    field.remove(PdfName.BC);
-                    field.remove(PdfName.BG);
-                    field.remove(PdfName.AC);
-                    field.remove(PdfName.RC);
-                    
-                    // Set border to 0
-                    PdfDictionary bs = new PdfDictionary();
-                    bs.put(PdfName.W, new PdfNumber(0));
-                    field.put(PdfName.BS, bs);
-                    
-                    // Remove background completely - use transparent
-                    PdfArray noColor = new PdfArray();
-                    field.put(PdfName.BG, noColor);
-                    
-                    // Set font with no background
-                    String daString = "0 0 0 rg /Arial " + fontSize + " Tf";
-                    field.put(PdfName.DA, new PdfString(daString));
-                    
-                    // Clear appearance stream
-                    PdfDictionary ap = field.getAsDict(PdfName.AP);
-                    if (ap != null) {
-                        ap.clear();
+        System.out.println("🔧 Applying formatting (Arial " + fontSize + ")...");
+        
+        for (String fieldName : form.getFields().keySet()) {
+            try {
+                AcroFields.Item item = form.getFieldItem(fieldName);
+                if (item != null) {
+                    PdfDictionary field = item.getMerged(0);
+                    if (field != null) {
+                        // Remove all styling
+                        field.remove(PdfName.BS);
+                        field.remove(PdfName.B);
+                        field.remove(PdfName.BC);
+                        field.remove(PdfName.BG);
+                        field.remove(PdfName.AC);
+                        field.remove(PdfName.RC);
+                        
+                        // Set border to 0
+                        PdfDictionary bs = new PdfDictionary();
+                        bs.put(PdfName.W, new PdfNumber(0));
+                        field.put(PdfName.BS, bs);
+                        
+                        // Remove background completely - use transparent
+                        PdfArray noColor = new PdfArray();
+                        field.put(PdfName.BG, noColor);
+                        
+                        // Set font with no background
+                        String daString = "0 0 0 rg /Arial " + fontSize + " Tf";
+                        field.put(PdfName.DA, new PdfString(daString));
+                        
+                        // Clear appearance stream
+                        PdfDictionary ap = field.getAsDict(PdfName.AP);
+                        if (ap != null) {
+                            ap.clear();
+                        }
+                        
+                        // Set appearance characteristics to no fill
+                        PdfDictionary mk = field.getAsDict(PdfName.MK);
+                        if (mk == null) {
+                            mk = new PdfDictionary();
+                            field.put(PdfName.MK, mk);
+                        }
+                        mk.remove(PdfName.BG);
+                        mk.remove(PdfName.BC);
+                        
+                        System.out.println("   ✓ " + fieldName);
                     }
-                    
-                    // Set appearance characteristics to no fill
-                    PdfDictionary mk = field.getAsDict(PdfName.MK);
-                    if (mk == null) {
-                        mk = new PdfDictionary();
-                        field.put(PdfName.MK, mk);
-                    }
-                    mk.remove(PdfName.BG);
-                    mk.remove(PdfName.BC);
-                    
-                    System.out.println("   ✓ " + fieldName);
                 }
+            } catch (Exception e) {
+                System.out.println("   ⚠️ " + fieldName);
             }
-        } catch (Exception e) {
-            System.out.println("   ⚠️ " + fieldName);
         }
+        System.out.println("✅ Formatting complete");
     }
-    System.out.println("✅ Formatting complete");
-}
 
     public static void main(String[] args) {
         generateCertificate(
@@ -290,7 +292,7 @@ public class CertificateGenerator {
             "Blk 5 Lot 12 Sampaguita St., Brgy. San Isidro",
             "8",
             "Employment Requirements",
-            null,
+            "50000",
             "San Isidro",
             "Metro Manila",
             "OR-2026-001"

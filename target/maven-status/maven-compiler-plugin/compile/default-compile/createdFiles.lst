@@ -1,6 +1,7 @@
 com\mycompany\javasystem\AdminController$10.class
 com\mycompany\javasystem\AnnouncementsController.class
 com\mycompany\javasystem\ViewComplaintController.class
+com\mycompany\javasystem\PaymentsController$PaymentRowData.class
 com\mycompany\javasystem\AdminController$7.class
 com\mycompany\javasystem\ImageCropDialog.class
 com\mycompany\javasystem\SessionManager.class
@@ -11,6 +12,7 @@ com\mycompany\javasystem\AdminDashboardController.class
 com\mycompany\javasystem\SceneTransition.class
 com\mycompany\javasystem\AdminController$6.class
 com\mycompany\javasystem\AdminController$11.class
+com\mycompany\javasystem\DocumentsController$DocumentRowData.class
 com\mycompany\javasystem\FinancesController.class
 com\mycompany\javasystem\AdminController.class
 com\mycompany\javasystem\FinancesController$3.class

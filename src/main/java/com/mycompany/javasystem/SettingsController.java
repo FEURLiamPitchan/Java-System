@@ -26,6 +26,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SettingsController {
 
@@ -58,6 +60,14 @@ public class SettingsController {
     private StackPane announcementsToggle;
     private StackPane darkModeToggle;
 
+    private Node generalTabNode;
+    private Node notifTabNode;
+    private Node appearanceTabNode;
+    private Node dataTabNode;
+    
+    private int currentTabIndex = 0;
+    private ExecutorService executorService = Executors.newFixedThreadPool(1);
+
     private final String activeTabStyle =
         "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
         "-fx-font-size: 12px; -fx-font-weight: bold;" +
@@ -68,46 +78,55 @@ public class SettingsController {
         "-fx-border-color: #e0e0e0; -fx-border-width: 1;" +
         "-fx-padding: 10 20; -fx-cursor: hand;";
 
-    @FXML
-    public void initialize() {
-        loadTopBar();
-        loadAvatarPicture();
-        loadSettingsFromDB();
-        
-        // Apply theme after loading settings
-        Platform.runLater(() -> {
-            try {
-                Stage stage = (Stage) logoutButton.getScene().getWindow();
-                if (stage != null && stage.getScene() != null) {
-                    System.out.println("[SettingsController] Applying theme on init - isDarkMode: " + ThemeManager.isDarkMode);
-                    ThemeManager.applyTheme(stage);
-                }
-            } catch (Exception e) {
-                System.out.println("[SettingsController] Error applying theme: " + e.getMessage());
+@FXML
+public void initialize() {
+    loadTopBar();
+    loadAvatarPicture();
+    loadSettingsFromDB();
+
+    Platform.runLater(() -> {
+        try {
+            Stage stage = (Stage) logoutButton.getScene().getWindow();
+            if (stage != null && stage.getScene() != null) {
+                ThemeManager.setSettingsStage(stage);
+                ThemeManager.applyTheme(stage);
             }
-        });
-        
+        } catch (Exception e) {
+            System.out.println("[SettingsController] Theme error: " + e.getMessage());
+        }
+    });
+
+    System.out.println("[SettingsController] Building all tabs at init time...");
+
+    generalTabNode = buildGeneralTab();
+    notifTabNode = buildNotifTab();
+    appearanceTabNode = buildAppearanceTab();
+    dataTabNode = buildDataTab();
+
+    // ✅ IMPORTANT FIX: delay first tab load
+    Platform.runLater(() -> {
         showGeneralTab();
         refreshAlertBadge();
+    });
 
-        Platform.runLater(() -> {
-            if (mainScrollPane != null) {
-                mainScrollPane.getContent().setOnScroll(event -> {
-                    double deltaY = event.getDeltaY() * 8;
-                    double contentHeight = mainScrollPane.getContent()
-                        .getBoundsInLocal().getHeight();
-                    double viewportHeight = mainScrollPane.getViewportBounds().getHeight();
-                    double scrollableHeight = contentHeight - viewportHeight;
-                    if (scrollableHeight > 0) {
-                        double delta = deltaY / scrollableHeight;
-                        mainScrollPane.setVvalue(mainScrollPane.getVvalue() - delta);
-                    }
-                });
-            }
-        });
-    }
+    Platform.runLater(() -> {
+        if (mainScrollPane != null) {
+            mainScrollPane.getContent().setOnScroll(event -> {
+                double deltaY = event.getDeltaY() * 8;
+                double contentHeight = mainScrollPane.getContent().getBoundsInLocal().getHeight();
+                double viewportHeight = mainScrollPane.getViewportBounds().getHeight();
+                double scrollableHeight = contentHeight - viewportHeight;
 
-    // ── Top Bar ───────────────────────────────────────────────────────────────────
+                if (scrollableHeight > 0) {
+                    double delta = deltaY / scrollableHeight;
+                    mainScrollPane.setVvalue(mainScrollPane.getVvalue() - delta);
+                }
+            });
+        }
+    });
+}
+
+
     private void loadTopBar() {
         String name = SessionManager.getName();
         String role = SessionManager.getRole();
@@ -132,17 +151,35 @@ public class SettingsController {
         return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     }
 
-    // ── Alerts ────────────────────────────────────────────────────────────────────
+    @FXML
+    private void handleAvatarClick() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
+    }
+
     private void refreshAlertBadge() {
         String email = SessionManager.getEmail();
         if (email == null) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
+            
+            PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            userStmt.setString(1, email);
+            ResultSet userRs = userStmt.executeQuery();
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+            userRs.close();
+            userStmt.close();
+            
+            if (userId == -1) {
+                conn.close();
+                return;
+            }
+            
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
-            stmt.setString(1, email);
+                "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+            stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
             rs.close(); stmt.close(); conn.close();
@@ -190,7 +227,7 @@ public class SettingsController {
             "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
             "-fx-font-size: 11px; -fx-font-weight: bold;" +
             "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
-        Button pastBtn = new Button("Past Notifications");
+        Button pastBtn = new Button("All Notifications");
         pastBtn.setStyle(
             "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
             "-fx-font-size: 11px; -fx-background-radius: 20;" +
@@ -220,30 +257,45 @@ public class SettingsController {
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
+                
+                PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                userStmt.setString(1, email);
+                ResultSet userRs = userStmt.executeQuery();
+                int userId = -1;
+                if (userRs.next()) userId = userRs.getInt("id");
+                userRs.close();
+                userStmt.close();
+
+                if (userId == -1) {
+                    conn.close();
+                    return;
+                }
+
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT id, type, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY id DESC"
+                    : "SELECT id, type, message, is_read, created_at FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY id DESC";
+                
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
-                        rs.getString("notif_id"),
+                        rs.getString("id"),
                         rs.getString("type"),
                         rs.getString("message"),
-                        rs.getString("is_read"),
+                        String.valueOf(rs.getInt("is_read")),
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
 
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
                     empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
                     Label emptyLbl = new Label(
                         showingPast[0]
-                            ? "No past notifications."
+                            ? "No notifications yet"
                             : "You're all caught up! 🎉");
                     emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
                     empty.getChildren().add(emptyLbl);
@@ -332,7 +384,7 @@ public class SettingsController {
         row.setStyle(
             "-fx-padding: 16 24;" +
             "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
-            ("false".equals(isRead)
+            ("0".equals(isRead)
                 ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
                 : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
         row.setAlignment(Pos.CENTER_LEFT);
@@ -351,13 +403,13 @@ public class SettingsController {
         Label msgLbl = new Label(message);
         msgLbl.setStyle(
             "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
-            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+            ("0".equals(isRead) ? " -fx-font-weight: bold;" : ""));
         msgLbl.setWrapText(true);
         Label dateLbl = new Label(dateStr != null ? dateStr : "");
         dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
         textBox.getChildren().addAll(msgLbl, dateLbl);
 
-        if ("false".equals(isRead)) {
+        if ("0".equals(isRead)) {
             Circle dot = new Circle(4);
             dot.setStyle("-fx-fill: #1565c0;");
             row.getChildren().addAll(iconBox, textBox, dot);
@@ -441,7 +493,7 @@ public class SettingsController {
             "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
             "-fx-alignment: CENTER_LEFT;");
         goToBtn.setOnAction(e -> {
-            if ("false".equals(isRead)) markOneAsRead(notifId);
+            if ("0".equals(isRead)) markOneAsRead(notifId);
             detail.close();
             alertStage.close();
             Stage stage = (Stage) logoutButton.getScene().getWindow();
@@ -468,7 +520,7 @@ public class SettingsController {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
-        if ("true".equals(isRead)) {
+        if ("1".equals(isRead)) {
             footer.getChildren().add(cancelBtn);
         } else {
             markBtn.setOnAction(e -> {
@@ -491,212 +543,279 @@ public class SettingsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' " +
-                "WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = 1 WHERE id = ?");
+            stmt.setInt(1, Integer.parseInt(notifId));
             stmt.executeUpdate();
             stmt.close();
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // ── Avatar click ──────────────────────────────────────────────────────────────
-    @FXML
-    private void handleAvatarClick() {
-        Stage stage = (Stage) logoutButton.getScene().getWindow();
-        SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
-    }
-
-    // ── Load Settings ─────────────────────────────────────────────────────────────
     private void loadSettingsFromDB() {
         String email = SessionManager.getEmail();
         if (email == null) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
+            
+            PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            userStmt.setString(1, email);
+            ResultSet userRs = userStmt.executeQuery();
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+            userRs.close();
+            userStmt.close();
+            
+            if (userId == -1) {
+                conn.close();
+                return;
+            }
+            
             ResultSet rs = conn.prepareStatement(
-                "SELECT * FROM settings WHERE user_email = '" + email + "'"
+                "SELECT * FROM settings WHERE user_id = " + userId
             ).executeQuery();
             if (rs.next()) {
-                notifComplaints    = "true".equals(rs.getString("notif_complaints"));
-                notifPayments      = "true".equals(rs.getString("notif_payments"));
-                notifAnnouncements = "true".equals(rs.getString("notif_announcements"));
+                notifComplaints    = "true".equalsIgnoreCase(rs.getString("notif_complaints"));
+                notifPayments      = "true".equalsIgnoreCase(rs.getString("notif_payments"));
+                notifAnnouncements = "true".equalsIgnoreCase(rs.getString("notif_announcements"));
                 String fs = rs.getString("font_size");
                 if (fs != null) currentFontSize = fs;
                 String dm = rs.getString("dark_mode");
                 isDarkModeState    = "true".equalsIgnoreCase(dm);
                 
-                // SYNC with ThemeManager
+                // ✅ SYNC WITH THEME MANAGER
                 ThemeManager.isDarkMode = isDarkModeState;
                 
-                System.out.println("[DEBUG] Loaded dark_mode from DB: " + dm + " -> " + isDarkModeState);
-                System.out.println("[DEBUG] ThemeManager.isDarkMode synced to: " + ThemeManager.isDarkMode);
+                System.out.println("[SettingsController] Loaded dark_mode from DB: " + dm + " -> " + isDarkModeState);
+                System.out.println("[SettingsController] ThemeManager.isDarkMode synced to: " + ThemeManager.isDarkMode);
             } else {
-                insertDefaultSettings(email);
+                insertDefaultSettings(email, userId);
             }
             rs.close();
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    private void insertDefaultSettings(String email) {
+    private void insertDefaultSettings(String email, int userId) {
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement stmt = conn.prepareStatement(
-                "INSERT INTO settings (user_email, dark_mode, font_size, " +
+                "INSERT INTO settings (user_id, dark_mode, font_size, " +
                 "notif_complaints, notif_payments, notif_announcements, base_population) " +
                 "VALUES (?, 'false', 'Medium', 'true', 'true', 'true', 6474)");
-            stmt.setString(1, email);
+            stmt.setInt(1, userId);
             stmt.executeUpdate();
             stmt.close();
             conn.close();
+            
+            isDarkModeState = false;
+            ThemeManager.isDarkMode = false;
+            System.out.println("[SettingsController] Created default settings with dark_mode = false");
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // ── Tab Switching ─────────────────────────────────────────────────────────────
-    private void setActiveTab(Button active) {
+    private void setActiveTab(Button active, int tabIndex) {
         for (Button btn : new Button[]{
             tabGeneralBtn, tabNotifBtn, tabAppearanceBtn, tabDataBtn}) {
             btn.setStyle(inactiveTabStyle);
         }
         active.setStyle(activeTabStyle);
+        currentTabIndex = tabIndex;
     }
 
-    @FXML private void showGeneralTab() {
-        setActiveTab(tabGeneralBtn);
-        Node content = buildGeneralTab();
-        tabContent.getChildren().setAll(content);
-        applyThemeToNewContent();
-    }
+     @FXML
+     private void showGeneralTab() {
+         setActiveTab(tabGeneralBtn, 0);
+         tabContent.getChildren().setAll(generalTabNode);
+     }
 
-    @FXML private void showNotifTab() {
-        setActiveTab(tabNotifBtn);
-        Node content = buildNotifTab();
-        tabContent.getChildren().setAll(content);
-        applyThemeToNewContent();
-    }
+     @FXML
+     private void showNotifTab() {
+         setActiveTab(tabNotifBtn, 1);
+         tabContent.getChildren().setAll(notifTabNode);
+     }
 
-    @FXML private void showAppearanceTab() {
-        setActiveTab(tabAppearanceBtn);
-        Node content = buildAppearanceTab();
-        tabContent.getChildren().setAll(content);
-        applyThemeToNewContent();
-    }
+     @FXML
+     private void showAppearanceTab() {
+         setActiveTab(tabAppearanceBtn, 2);
+         tabContent.getChildren().setAll(appearanceTabNode);
+     }
 
-    @FXML private void showDataTab() {
-        setActiveTab(tabDataBtn);
-        Node content = buildDataTab();
-        tabContent.getChildren().setAll(content);
-        applyThemeToNewContent();
-    }
+     @FXML
+     private void showDataTab() {
+         setActiveTab(tabDataBtn, 3);
+         tabContent.getChildren().setAll(dataTabNode);
+     }
 
-    private void applyThemeToNewContent() {
-        Platform.runLater(() -> {
-            try {
-                Stage stage = (Stage) logoutButton.getScene().getWindow();
-                if (stage != null && stage.getScene() != null) {
-                    ThemeManager.applyTheme(stage);
-                }
-            } catch (Exception e) {
-                System.out.println("[SettingsController] Error applying theme to new content: " + e.getMessage());
-            }
-        });
-    }
 
-    // ── GENERAL TAB ───────────────────────────────────────────────────────────────
-    private Node buildGeneralTab() {
-        VBox container = new VBox(0);
-        container.setMaxWidth(Double.MAX_VALUE);
-        container.setStyle(
-            "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
-            "-fx-border-color: #e8e8e8; -fx-border-width: 1;");
+private Node buildGeneralTab() {
 
-        VBox header = new VBox(4);
-        header.setStyle(
-            "-fx-background-color: #1a1a1a; -fx-background-radius: 16 16 0 0;" +
-            "-fx-padding: 22 28;");
-        Label title = new Label("General Settings");
-        title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
-        Label sub = new Label("Configure system-wide preferences");
-        sub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
-        header.getChildren().addAll(title, sub);
+    boolean dark = ThemeManager.isDarkMode;
 
-        VBox body = new VBox(0);
-        body.setStyle("-fx-padding: 0;");
+    VBox container = new VBox(0);
+    container.setMaxWidth(Double.MAX_VALUE);
 
-        TextField popField = new TextField();
-        popField.setStyle(
-            "-fx-font-size: 13px; -fx-padding: 10 14; -fx-background-radius: 10;" +
-            "-fx-border-color: #e8e8e8; -fx-border-width: 1; -fx-border-radius: 10;" +
-            "-fx-background-color: #f8f9fa; -fx-max-width: 200;");
-        popField.setPromptText("e.g. 6474");
+    String containerBg = dark ? "#1a1a1a" : "#ffffff";
+    String containerBorder = dark ? "#333333" : "#e8e8e8";
+    String headerBg = "#1a1a1a";
 
-        Label popErrorLbl = new Label("");
-        popErrorLbl.setStyle("-fx-font-size: 11px;");
+    container.setStyle(
+        "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
+        "-fx-border-color: " + containerBorder + "; -fx-border-width: 1;"
+    );
 
-        try {
-            Connection conn = DatabaseConnection.getConnection();
+    VBox header = new VBox(4);
+    header.setStyle(
+        "-fx-background-color: " + headerBg + "; -fx-background-radius: 16 16 0 0;" +
+        "-fx-padding: 22 28;"
+    );
+
+    Label title = new Label("General Settings");
+    title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
+
+    Label sub = new Label("Configure system-wide preferences");
+    sub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
+
+    header.getChildren().addAll(title, sub);
+
+    VBox body = new VBox(0);
+
+    String bodyBg = dark ? "#1a1a1a" : "#ffffff";
+    String fieldBg = dark ? "#242424" : "#f8f9fa";
+    String fieldBorder = dark ? "#444444" : "#e8e8e8";
+    String fieldText = dark ? "#ffffff" : "#000000";
+
+    body.setStyle("-fx-padding: 0; -fx-background-color: " + bodyBg + ";");
+
+    TextField popField = new TextField();
+    popField.setStyle(
+        "-fx-font-size: 13px; -fx-padding: 10 14; -fx-background-radius: 10;" +
+        "-fx-border-color: " + fieldBorder + "; -fx-border-width: 1; -fx-border-radius: 10;" +
+        "-fx-background-color: " + fieldBg + "; -fx-text-fill: " + fieldText + ";" +
+        "-fx-max-width: 200;"
+    );
+    popField.setPromptText("e.g. 6474");
+
+    Label popErrorLbl = new Label("");
+    popErrorLbl.setStyle("-fx-font-size: 11px;");
+
+    try {
+        Connection conn = DatabaseConnection.getConnection();
+
+        String email = SessionManager.getEmail();
+        PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+        userStmt.setString(1, email);
+        ResultSet userRs = userStmt.executeQuery();
+
+        int userId = -1;
+        if (userRs.next()) userId = userRs.getInt("id");
+
+        userRs.close();
+        userStmt.close();
+
+        if (userId != -1) {
             ResultSet rs = conn.prepareStatement(
-                "SELECT base_population FROM settings WHERE user_email = '" +
-                SessionManager.getEmail() + "'"
+                "SELECT base_population FROM settings WHERE user_id = " + userId
             ).executeQuery();
-            if (rs.next()) popField.setText(String.valueOf(rs.getInt("base_population")));
-            rs.close();
-            conn.close();
-        } catch (Exception e) { e.printStackTrace(); }
 
-        Button savePopBtn = new Button("Save");
-        savePopBtn.setStyle(
-            "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
-            "-fx-font-size: 12px; -fx-font-weight: bold;" +
-            "-fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;");
-        savePopBtn.setOnAction(e -> {
-            String val = popField.getText().trim();
-            try {
-                int pop = Integer.parseInt(val);
-                Connection conn = DatabaseConnection.getConnection();
+            if (rs.next()) {
+                popField.setText(String.valueOf(rs.getInt("base_population")));
+            }
+
+            rs.close();
+        }
+
+        conn.close();
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    Button savePopBtn = new Button("Save");
+    savePopBtn.setStyle(
+        "-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;" +
+        "-fx-font-size: 12px; -fx-font-weight: bold;" +
+        "-fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;"
+    );
+
+    savePopBtn.setOnAction(e -> {
+        try {
+            int pop = Integer.parseInt(popField.getText().trim());
+
+            Connection conn = DatabaseConnection.getConnection();
+
+            String email = SessionManager.getEmail();
+            PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            userStmt.setString(1, email);
+            ResultSet userRs = userStmt.executeQuery();
+
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+
+            userRs.close();
+            userStmt.close();
+
+            if (userId != -1) {
                 PreparedStatement stmt = conn.prepareStatement(
-                    "UPDATE settings SET base_population = ? WHERE user_email = ?");
+                    "UPDATE settings SET base_population = ? WHERE user_id = ?"
+                );
                 stmt.setInt(1, pop);
-                stmt.setString(2, SessionManager.getEmail());
+                stmt.setInt(2, userId);
                 stmt.executeUpdate();
                 stmt.close();
-                conn.close();
-                setStatus(popErrorLbl, "✅  Saved!", true);
-            } catch (Exception ex) {
-                setStatus(popErrorLbl, "⚠  Enter a valid number.", false);
             }
-        });
 
-        HBox popRow = new HBox(12);
-        popRow.setStyle("-fx-alignment: CENTER_LEFT;");
-        popRow.getChildren().addAll(popField, savePopBtn, popErrorLbl);
+            conn.close();
 
-        body.getChildren().addAll(
-            buildSettingRow("Population Base",
-                "The base census count added to your DB resident count on the dashboard",
-                popRow, false),
-            buildSettingRow("System Version",
-                "Current version of the Barangay Management System",
-                buildReadOnlyValue("v1.0.0"), false),
-            buildSettingRow("Database",
-                "Connected to Microsoft Access database",
-                buildReadOnlyValue("MS Access — Connected ✅"), true)
-        );
+            setStatus(popErrorLbl, "✅ Saved!", true);
 
-        container.getChildren().addAll(header, body);
-        return container;
-    }
+        } catch (Exception ex) {
+            setStatus(popErrorLbl, "⚠ Enter a valid number.", false);
+        }
+    });
 
-    // ── NOTIFICATIONS TAB ─────────────────────────────────────────────────────────
+    HBox popRow = new HBox(12);
+    popRow.setStyle("-fx-alignment: CENTER_LEFT;");
+    popRow.getChildren().addAll(popField, savePopBtn, popErrorLbl);
+
+    body.getChildren().addAll(
+        buildSettingRow(
+            "Population Base",
+            "The base census count added to your DB resident count on the dashboard",
+            popRow,
+            false
+        ),
+        buildSettingRow(
+            "System Version",
+            "Current version of the Barangay Management System",
+            buildReadOnlyValue("v1.0.0"),
+            false
+        ),
+        buildSettingRow(
+            "Database",
+            "Connected to Microsoft Access database",
+            buildReadOnlyValue("MS Access — Connected ✅"),
+            true
+        )
+    );
+
+    container.getChildren().addAll(header, body);
+    return container;
+}
     private Node buildNotifTab() {
         VBox container = new VBox(0);
         container.setMaxWidth(Double.MAX_VALUE);
+        
+        String containerBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        String containerBorder = ThemeManager.isDarkMode ? "#333333" : "#e8e8e8";
+        String headerBg = "#1a1a1a";
+        
         container.setStyle(
-            "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
-            "-fx-border-color: #e8e8e8; -fx-border-width: 1;");
+            "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
+            "-fx-border-color: " + containerBorder + "; -fx-border-width: 1;");
 
         VBox header = new VBox(4);
         header.setStyle(
-            "-fx-background-color: #1a1a1a; -fx-background-radius: 16 16 0 0;" +
+            "-fx-background-color: " + headerBg + "; -fx-background-radius: 16 16 0 0;" +
             "-fx-padding: 22 28;");
         Label title = new Label("Notification Settings");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
@@ -719,15 +838,27 @@ public class SettingsController {
         saveBtn.setOnAction(e -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                    "UPDATE settings SET notif_complaints=?, notif_payments=?," +
-                    " notif_announcements=? WHERE user_email=?");
-                stmt.setString(1, isToggleOn(complaintsToggle)    ? "true" : "false");
-                stmt.setString(2, isToggleOn(paymentsToggle)      ? "true" : "false");
-                stmt.setString(3, isToggleOn(announcementsToggle) ? "true" : "false");
-                stmt.setString(4, SessionManager.getEmail());
-                stmt.executeUpdate();
-                stmt.close();
+                
+                String email = SessionManager.getEmail();
+                PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                userStmt.setString(1, email);
+                ResultSet userRs = userStmt.executeQuery();
+                int userId = -1;
+                if (userRs.next()) userId = userRs.getInt("id");
+                userRs.close();
+                userStmt.close();
+                
+                if (userId != -1) {
+                    PreparedStatement stmt = conn.prepareStatement(
+                        "UPDATE settings SET notif_complaints=?, notif_payments=?," +
+                        " notif_announcements=? WHERE user_id=?");
+                    stmt.setString(1, isToggleOn(complaintsToggle)    ? "true" : "false");
+                    stmt.setString(2, isToggleOn(paymentsToggle)      ? "true" : "false");
+                    stmt.setString(3, isToggleOn(announcementsToggle) ? "true" : "false");
+                    stmt.setInt(4, userId);
+                    stmt.executeUpdate();
+                    stmt.close();
+                }
                 conn.close();
                 setStatus(errorLbl, "✅  Notification settings saved!", true);
             } catch (Exception ex) {
@@ -737,10 +868,15 @@ public class SettingsController {
         });
 
         HBox footer = new HBox(10);
-        footer.setStyle("-fx-padding: 20 28; -fx-alignment: CENTER_RIGHT;");
+        footer.setStyle(
+            "-fx-padding: 20 28; -fx-alignment: CENTER_RIGHT;" +
+            "-fx-border-color: #f4f4f4; -fx-border-width: 1 0 0 0;");
         footer.getChildren().addAll(errorLbl, saveBtn);
 
         VBox body = new VBox(0);
+        String bodyBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        body.setStyle("-fx-background-color: " + bodyBg + ";");
+        
         body.getChildren().addAll(
             buildToggleRow("Complaint Alerts",
                 "Get notified when a new complaint is filed",
@@ -757,17 +893,21 @@ public class SettingsController {
         return container;
     }
 
-    // ── APPEARANCE TAB ────────────────────────────────────────────────────────────
     private Node buildAppearanceTab() {
         VBox container = new VBox(0);
         container.setMaxWidth(Double.MAX_VALUE);
+        
+        String containerBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        String containerBorder = ThemeManager.isDarkMode ? "#333333" : "#e8e8e8";
+        String headerBg = "#1a1a1a";
+        
         container.setStyle(
-            "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
-            "-fx-border-color: #e8e8e8; -fx-border-width: 1;");
+            "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
+            "-fx-border-color: " + containerBorder + "; -fx-border-width: 1;");
 
         VBox header = new VBox(4);
         header.setStyle(
-            "-fx-background-color: #1a1a1a; -fx-background-radius: 16 16 0 0;" +
+            "-fx-background-color: " + headerBg + "; -fx-background-radius: 16 16 0 0;" +
             "-fx-padding: 22 28;");
         Label title = new Label("Appearance");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
@@ -775,7 +915,6 @@ public class SettingsController {
         sub.setStyle("-fx-font-size: 12px; -fx-text-fill: #aaaaaa;");
         header.getChildren().addAll(title, sub);
 
-        // ── FONT SIZE SECTION ──
         Button fontSmallBtn  = new Button("Small");
         Button fontMediumBtn = new Button("Medium");
         Button fontLargeBtn  = new Button("Large");
@@ -811,12 +950,24 @@ public class SettingsController {
         saveFontBtn.setOnAction(e -> {
             try {
                 Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                    "UPDATE settings SET font_size = ? WHERE user_email = ?");
-                stmt.setString(1, currentFontSize);
-                stmt.setString(2, SessionManager.getEmail());
-                stmt.executeUpdate();
-                stmt.close();
+                
+                String email = SessionManager.getEmail();
+                PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                userStmt.setString(1, email);
+                ResultSet userRs = userStmt.executeQuery();
+                int userId = -1;
+                if (userRs.next()) userId = userRs.getInt("id");
+                userRs.close();
+                userStmt.close();
+                
+                if (userId != -1) {
+                    PreparedStatement stmt = conn.prepareStatement(
+                        "UPDATE settings SET font_size = ? WHERE user_id = ?");
+                    stmt.setString(1, currentFontSize);
+                    stmt.setInt(2, userId);
+                    stmt.executeUpdate();
+                    stmt.close();
+                }
                 conn.close();
                 setStatus(fontErrorLbl, "✅  Saved!", true);
             } catch (Exception ex) {
@@ -829,8 +980,7 @@ public class SettingsController {
         fontRow.getChildren().addAll(
             fontSmallBtn, fontMediumBtn, fontLargeBtn, saveFontBtn, fontErrorLbl);
 
-        // ── DARK MODE TOGGLE ──
-        System.out.println("[DEBUG] isDarkModeState = " + isDarkModeState);
+        System.out.println("[SettingsController] isDarkModeState = " + isDarkModeState + ", ThemeManager.isDarkMode = " + ThemeManager.isDarkMode);
         darkModeToggle = buildToggle(isDarkModeState);
         
         Label darkModeErrorLbl = new Label("");
@@ -840,7 +990,6 @@ public class SettingsController {
         darkModeControlRow.setStyle("-fx-alignment: CENTER_LEFT;");
         darkModeControlRow.getChildren().addAll(darkModeToggle, darkModeErrorLbl);
 
-        // IMPORTANT: Set click handler AFTER adding to scene
         darkModeToggle.setOnMouseClicked(e -> {
             System.out.println("\n========== [SETTINGS] DARK MODE TOGGLE CLICKED ==========");
             boolean currentState = (boolean) darkModeToggle.getUserData();
@@ -849,7 +998,6 @@ public class SettingsController {
             boolean newDarkMode = !currentState;
             System.out.println("[SETTINGS] New state: " + newDarkMode);
             
-            // Update toggle visually first
             Rectangle track = (Rectangle) darkModeToggle.getChildren().get(0);
             Circle thumb = (Circle) darkModeToggle.getChildren().get(1);
             
@@ -863,37 +1011,114 @@ public class SettingsController {
             }
             tt.play();
             
-            // Update state
             darkModeToggle.setUserData(newDarkMode);
             isDarkModeState = newDarkMode;
             
-            // Save to database
-            try {
-                Connection conn = DatabaseConnection.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                    "UPDATE settings SET dark_mode = ? WHERE user_email = ?");
-                stmt.setString(1, newDarkMode ? "true" : "false");
-                stmt.setString(2, SessionManager.getEmail());
-                int updated = stmt.executeUpdate();
-                System.out.println("[SETTINGS] DB updated: " + updated);
-                stmt.close();
-                conn.close();
-                setStatus(darkModeErrorLbl, "✅  Theme saved!", true);
-            } catch (Exception ex) {
-                System.out.println("[ERROR] " + ex.getMessage());
-                setStatus(darkModeErrorLbl, "⚠  Error saving theme.", false);
-            }
+            // ✅ SAVE TO DATABASE IN BACKGROUND
+            executorService.execute(() -> {
+                try {
+                    Connection conn = DatabaseConnection.getConnection();
+                    
+                    String email = SessionManager.getEmail();
+                    PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                    userStmt.setString(1, email);
+                    ResultSet userRs = userStmt.executeQuery();
+                    int userId = -1;
+                    if (userRs.next()) userId = userRs.getInt("id");
+                    userRs.close();
+                    userStmt.close();
+                    
+                    if (userId != -1) {
+                        PreparedStatement stmt = conn.prepareStatement(
+                            "UPDATE settings SET dark_mode = ? WHERE user_id = ?");
+                        stmt.setString(1, newDarkMode ? "true" : "false");
+                        stmt.setInt(2, userId);
+                        int updated = stmt.executeUpdate();
+                        System.out.println("[SETTINGS] DB updated: " + updated + " rows");
+                        stmt.close();
+                    }
+                    conn.close();
+                    
+                    // ✅ VERIFY IT WAS SAVED
+                    conn = DatabaseConnection.getConnection();
+                    userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                    userStmt.setString(1, email);
+                    userRs = userStmt.executeQuery();
+                    userId = -1;
+                    if (userRs.next()) userId = userRs.getInt("id");
+                    userRs.close();
+                    userStmt.close();
+                    
+                    if (userId != -1) {
+                        PreparedStatement verifyStmt = conn.prepareStatement(
+                            "SELECT dark_mode FROM settings WHERE user_id = ?");
+                        verifyStmt.setInt(1, userId);
+                        ResultSet verifyRs = verifyStmt.executeQuery();
+                        if (verifyRs.next()) {
+                            String savedValue = verifyRs.getString("dark_mode");
+                            System.out.println("[SETTINGS] Verified saved value: " + savedValue);
+                        }
+                        verifyRs.close();
+                        verifyStmt.close();
+                    }
+                    conn.close();
+                    
+                    setStatus(darkModeErrorLbl, "✅  Theme saved!", true);
+                } catch (Exception ex) {
+                    System.out.println("[ERROR] " + ex.getMessage());
+                    ex.printStackTrace();
+                    setStatus(darkModeErrorLbl, "⚠  Error saving theme.", false);
+                }
+            });
             
-            // Apply theme to current scene using Java code
             Stage stage = (Stage) logoutButton.getScene().getWindow();
             ThemeManager.isDarkMode = newDarkMode;
             System.out.println("[SETTINGS] ThemeManager.isDarkMode set to: " + ThemeManager.isDarkMode);
+            
+            System.out.println("[SETTINGS] Rebuilding all tabs with new theme...");
+            Platform.runLater(() -> {
+                generalTabNode = buildGeneralTab();
+                notifTabNode = buildNotifTab();
+                dataTabNode = buildDataTab();
+                appearanceTabNode = buildAppearanceTab();
+
+                switch (currentTabIndex) {
+                    case 0:
+                        showGeneralTab();
+                        break;
+                    case 1:
+                        showNotifTab();
+                        break;
+                    case 2:
+                        showAppearanceTab();
+                        break;
+                    case 3:
+                        showDataTab();
+                        break;
+                }
+            });
+
+            
+            System.out.println("[SETTINGS] Applying theme to stage...");
             ThemeManager.applyTheme(stage);
-            System.out.println("[SETTINGS] Theme applied successfully");
+            
+            if (currentTabIndex == 0) showGeneralTab();
+            else if (currentTabIndex == 1) showNotifTab();
+            else if (currentTabIndex == 2) showAppearanceTab();
+            else if (currentTabIndex == 3) showDataTab();
+            
+            if (mainScrollPane != null) {
+                mainScrollPane.layout();
+            }
+            
+            System.out.println("[SETTINGS] Theme toggled successfully");
             System.out.println("========== [SETTINGS] DARK MODE TOGGLE FINISHED ==========\n");
         });
 
         VBox body = new VBox(0);
+        String bodyBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        body.setStyle("-fx-background-color: " + bodyBg + ";");
+        
         body.getChildren().addAll(
             buildSettingRow("Font Size",
                 "Adjust the text size throughout the system",
@@ -907,17 +1132,21 @@ public class SettingsController {
         return container;
     }
 
-    // ── DATA TAB ───────────────────────────────────────────────────────���──────────
     private Node buildDataTab() {
         VBox container = new VBox(0);
         container.setMaxWidth(Double.MAX_VALUE);
+        
+        String containerBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        String containerBorder = ThemeManager.isDarkMode ? "#333333" : "#e8e8e8";
+        String headerBg = "#1a1a1a";
+        
         container.setStyle(
-            "-fx-background-color: #ffffff; -fx-background-radius: 16;" +
-            "-fx-border-color: #e8e8e8; -fx-border-width: 1;");
+            "-fx-background-color: " + containerBg + "; -fx-background-radius: 16;" +
+            "-fx-border-color: " + containerBorder + "; -fx-border-width: 1;");
 
         VBox header = new VBox(4);
         header.setStyle(
-            "-fx-background-color: #1a1a1a; -fx-background-radius: 16 16 0 0;" +
+            "-fx-background-color: " + headerBg + "; -fx-background-radius: 16 16 0 0;" +
             "-fx-padding: 22 28;");
         Label title = new Label("Data and Export");
         title.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
@@ -982,6 +1211,9 @@ public class SettingsController {
         logRow.setStyle("-fx-alignment: CENTER_LEFT;");
 
         VBox body = new VBox(0);
+        String bodyBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        body.setStyle("-fx-background-color: " + bodyBg + ";");
+        
         body.getChildren().addAll(
             buildSettingRow("Export Residents",
                 "Download all resident records as a CSV file",
@@ -1001,22 +1233,27 @@ public class SettingsController {
         return container;
     }
 
-    // ── ROW BUILDERS ─────────────────────────────────────────────────────────────
     private HBox buildSettingRow(String title, String description,
                                   Node control, boolean isLast) {
         HBox row = new HBox(16);
+        
+        String rowBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        String textColor = ThemeManager.isDarkMode ? "#ffffff" : "#1a1a1a";
+        String descColor = ThemeManager.isDarkMode ? "#aaaaaa" : "#aaaaaa";
+        String borderColor = ThemeManager.isDarkMode ? "#333333" : "#f4f4f4";
+        
         row.setStyle(
-            "-fx-padding: 20 28;" +
-            (isLast ? "" : "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;"));
+            "-fx-padding: 20 28; -fx-background-color: " + rowBg + ";" +
+            (isLast ? "" : "-fx-border-color: " + borderColor + "; -fx-border-width: 0 0 1 0;"));
         row.setAlignment(Pos.CENTER_LEFT);
 
         VBox textBox = new VBox(4);
         HBox.setHgrow(textBox, Priority.ALWAYS);
         Label titleLbl = new Label(title);
         titleLbl.setStyle(
-            "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
+            "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + textColor + ";");
         Label descLbl = new Label(description);
-        descLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        descLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + descColor + ";");
         descLbl.setWrapText(true);
         textBox.getChildren().addAll(titleLbl, descLbl);
 
@@ -1027,18 +1264,24 @@ public class SettingsController {
     private HBox buildToggleRow(String title, String description,
                                  StackPane toggle, boolean isLast) {
         HBox row = new HBox(16);
+        
+        String rowBg = ThemeManager.isDarkMode ? "#1a1a1a" : "#ffffff";
+        String textColor = ThemeManager.isDarkMode ? "#ffffff" : "#1a1a1a";
+        String descColor = ThemeManager.isDarkMode ? "#aaaaaa" : "#aaaaaa";
+        String borderColor = ThemeManager.isDarkMode ? "#333333" : "#f4f4f4";
+        
         row.setStyle(
-            "-fx-padding: 20 28;" +
-            (isLast ? "" : "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;"));
+            "-fx-padding: 20 28; -fx-background-color: " + rowBg + ";" +
+            (isLast ? "" : "-fx-border-color: " + borderColor + "; -fx-border-width: 0 0 1 0;"));
         row.setAlignment(Pos.CENTER_LEFT);
 
         VBox textBox = new VBox(4);
         HBox.setHgrow(textBox, Priority.ALWAYS);
         Label titleLbl = new Label(title);
         titleLbl.setStyle(
-            "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;");
+            "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: " + textColor + ";");
         Label descLbl = new Label(description);
-        descLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+        descLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: " + descColor + ";");
         textBox.getChildren().addAll(titleLbl, descLbl);
 
         row.getChildren().addAll(textBox, toggle);
@@ -1046,10 +1289,13 @@ public class SettingsController {
     }
 
     private Label buildReadOnlyValue(String value) {
+        String valueBg = ThemeManager.isDarkMode ? "#242424" : "#f4f4f4";
+        String valueText = ThemeManager.isDarkMode ? "#e8e8e8" : "#555555";
+        
         Label lbl = new Label(value);
         lbl.setStyle(
-            "-fx-font-size: 12px; -fx-text-fill: #555555;" +
-            "-fx-background-color: #f4f4f4; -fx-background-radius: 8;" +
+            "-fx-font-size: 12px; -fx-text-fill: " + valueText + ";" +
+            "-fx-background-color: " + valueBg + "; -fx-background-radius: 8;" +
             "-fx-padding: 8 14;");
         return lbl;
     }
@@ -1061,7 +1307,6 @@ public class SettingsController {
                "-fx-border-width: 1; -fx-padding: 9 18; -fx-cursor: hand;";
     }
 
-    // ── TOGGLE SWITCH ─────────────────────────────────────────────────────────────
     private StackPane buildToggle(boolean initialState) {
         Rectangle track = new Rectangle(50, 26);
         track.setArcWidth(26);
@@ -1075,7 +1320,6 @@ public class SettingsController {
         toggle.setStyle("-fx-cursor: hand;");
         toggle.setUserData(initialState);
 
-        // Set initial visual state
         if (initialState) {
             track.setFill(Color.web("#2e7d32"));
             thumb.setTranslateX(12);
@@ -1091,7 +1335,6 @@ public class SettingsController {
         return toggle != null && (boolean) toggle.getUserData();
     }
 
-    // ── EXPORT HELPERS ────────────────────────────────────────────────────────────
     private void exportResidents() {
         try {
             String fileName = "residents_export_" + LocalDate.now() + ".csv";
@@ -1119,17 +1362,17 @@ public class SettingsController {
         try {
             String fileName = "payments_export_" + LocalDate.now() + ".csv";
             FileWriter writer = new FileWriter(fileName);
-            writer.write("Payment ID,Ref,Resident,Type,Amount,Status,Date\n");
+            writer.write("ID,Ref,Resident,Type,Amount,Status,Date\n");
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.prepareStatement(
-                "SELECT payment_id, ref_number, resident_name, payment_type, " +
-                "amount, status, date_created FROM payments ORDER BY ID DESC"
+                "SELECT id, ref_number, resident_id, payment_type, " +
+                "amount, status, date_created FROM payments ORDER BY id DESC"
             ).executeQuery();
             while (rs.next()) {
                 writer.write(
-                    clean(rs.getString("payment_id")) + "," +
+                    rs.getInt("id") + "," +
                     clean(rs.getString("ref_number")) + "," +
-                    clean(rs.getString("resident_name")) + "," +
+                    rs.getInt("resident_id") + "," +
                     clean(rs.getString("payment_type")) + "," +
                     rs.getDouble("amount") + "," +
                     clean(rs.getString("status")) + "," +
@@ -1146,12 +1389,12 @@ public class SettingsController {
             writer.write("ID,Description,Category,Type,Amount,Status,Date\n");
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.prepareStatement(
-                "SELECT finance_id, description, category, type, amount, status, date_recorded " +
-                "FROM finances ORDER BY finance_id DESC"
+                "SELECT id, description, category, type, amount, status, date_recorded " +
+                "FROM finances ORDER BY id DESC"
             ).executeQuery();
             while (rs.next()) {
                 writer.write(
-                    rs.getInt("finance_id") + "," +
+                    rs.getInt("id") + "," +
                     clean(rs.getString("description")) + "," +
                     clean(rs.getString("category")) + "," +
                     clean(rs.getString("type")) + "," +
@@ -1163,7 +1406,6 @@ public class SettingsController {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // ── HELPERS ───────────────────────────────────────────────────────────────────
     private String clean(String s) {
         if (s == null) return "";
         return "\"" + s.replace("\"", "''") + "\"";
@@ -1176,7 +1418,6 @@ public class SettingsController {
             : "-fx-text-fill: #c62828; -fx-font-size: 11px;");
     }
 
-    // ── NAVIGATION ────────────────────────────────────────────────────────────────
     @FXML private void handleLogout() {
         SessionManager.logout();
         Stage stage = (Stage) logoutButton.getScene().getWindow();

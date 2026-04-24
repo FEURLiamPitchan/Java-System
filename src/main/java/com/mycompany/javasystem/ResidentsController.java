@@ -69,139 +69,229 @@ public class ResidentsController {
         return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     }
 
-    // ── Load Residents ────────────────────────────────────────────────────────────
-    private void loadResidents(String search) {
-        residentsTableBody.getChildren().clear();
+// ── Load Residents ────────────────────────────────────────────────────────────
+private void loadResidents(String search) {
+    residentsTableBody.getChildren().clear();
+
+    try {
+        Connection conn = DatabaseConnection.getConnection();
+        PreparedStatement stmt;
+
+        if (search.isEmpty()) {
+            stmt = conn.prepareStatement("SELECT * FROM residents ORDER BY id");
+        } else {
+            stmt = conn.prepareStatement(
+                "SELECT * FROM residents WHERE full_name LIKE ? " +
+                "OR address LIKE ? OR contact_number LIKE ?"
+            );
+            stmt.setString(1, "%" + search + "%");
+            stmt.setString(2, "%" + search + "%");
+            stmt.setString(3, "%" + search + "%");
+        }
+
+        ResultSet rs = stmt.executeQuery();
+        boolean hasData = false;
+        int rowNumber = 1;
+
+        while (rs.next()) {
+            hasData = true;
+
+            int id = rs.getInt("id");
+            String fullName = rs.getString("full_name");
+            int age = rs.getInt("age");
+            String address = rs.getString("address");
+            String status = rs.getString("status");
+            String dateAdded = rs.getString("date_added") != null
+                    ? rs.getString("date_added") : "N/A";
+
+            // NEW FIELDS
+            String gender = rs.getString("gender") != null ? rs.getString("gender") : "N/A";
+            String birthPlace = rs.getString("birth_place") != null ? rs.getString("birth_place") : "N/A";
+            String birthDate = rs.getString("birth_date") != null ? rs.getString("birth_date") : "N/A";
+            String civilStatus = rs.getString("civil_status") != null ? rs.getString("civil_status") : "N/A";
+            String contactNumber = rs.getString("contact_number") != null ? rs.getString("contact_number") : "N/A";
+
+            // ── ROW ─────────────────────────────────────────────
+            HBox row = new HBox(10);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setStyle(
+                "-fx-padding: 14 16;" +
+                "-fx-border-color: #f8f8f8;" +
+                "-fx-border-width: 0 0 1 0;"
+            );
+
+            // ── ID ─────────────────────────────────────────────
+            Label idLabel = new Label(String.valueOf(rowNumber));
+            idLabel.setPrefWidth(100);
+            idLabel.setMinWidth(100);
+            idLabel.setMaxWidth(100);
+            idLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+
+            // ── NAME ───────────────────────────────────────────
+            Label nameLabel = new Label(fullName);
+            nameLabel.setPrefWidth(180);
+            nameLabel.setMinWidth(180);
+            nameLabel.setMaxWidth(180);
+            nameLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+
+            // ── AGE ────────────────────────────────────────────
+            Label ageLabel = new Label(String.valueOf(age));
+            ageLabel.setPrefWidth(100);
+            ageLabel.setMinWidth(100);
+            ageLabel.setMaxWidth(100);
+            ageLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+
+            // ── ADDRESS ────────────────────────────────────────
+            Label addressLabel = new Label(address);
+            addressLabel.setPrefWidth(250);
+            addressLabel.setMinWidth(250);
+            addressLabel.setMaxWidth(250);
+            addressLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
+
+            // ── STATUS ─────────────────────────────────────────
+            String statusColor = status.equals("Active") ? "#e8f5e9" : "#fff8e1";
+            String statusTextColor = status.equals("Active") ? "#4caf50" : "#f59e0b";
+
+            Label statusLabel = new Label(status);
+            statusLabel.setPrefWidth(100);
+            statusLabel.setMinWidth(100);
+            statusLabel.setMaxWidth(100);
+            statusLabel.setStyle(
+                "-fx-background-color: " + statusColor + ";" +
+                "-fx-text-fill: " + statusTextColor + ";" +
+                "-fx-font-size: 11px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 4;" +
+                "-fx-padding: 3 8;"
+            );
+
+            // ── BUTTON ─────────────────────────────────────────
+            Button viewBtn = new Button("View");
+            viewBtn.setPrefWidth(80);
+            viewBtn.setMinWidth(80);
+            viewBtn.setMaxWidth(80);
+            viewBtn.setStyle(
+                "-fx-background-color: #f4f4f4;" +
+                "-fx-text-fill: #333333;" +
+                "-fx-font-size: 11px;" +
+                "-fx-background-radius: 6;" +
+                "-fx-padding: 5 12;" +
+                "-fx-cursor: hand;"
+            );
+
+            final int fId = id;
+            final String fFullName = fullName;
+            final int fAge = age;
+            final String fAddress = address;
+            final String fStatus = status;
+            final String fDateAdded = dateAdded;
+            final String fGender = gender;
+            final String fBirthPlace = birthPlace;
+            final String fBirthDate = birthDate;
+            final String fCivilStatus = civilStatus;
+            final String fContactNumber = contactNumber;
+
+            viewBtn.setOnAction(e -> {
+                try {
+                    FXMLLoader loader = new FXMLLoader(
+                        getClass().getResource("ViewResidentModal.fxml")
+                    );
+                    Parent modalRoot = loader.load();
+
+                    ViewResidentController viewController = loader.getController();
+                    viewController.setResident(
+                        fId, fFullName, fAge, fAddress, fStatus, fDateAdded,
+                        fGender, fBirthPlace, fBirthDate, fCivilStatus, fContactNumber
+                    );
+
+                    viewController.setOnDelete(() -> loadResidents(""));
+
+                    Stage modalStage = new Stage();
+                    modalStage.initModality(Modality.APPLICATION_MODAL);
+                    modalStage.initOwner(logoutButton.getScene().getWindow());
+                    modalStage.setTitle("View Resident");
+                    modalStage.setScene(new Scene(modalRoot));
+                    modalStage.setResizable(false);
+                    modalStage.showAndWait();
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
+
+            row.getChildren().addAll(
+                idLabel, nameLabel, ageLabel, addressLabel, statusLabel, viewBtn
+            );
+
+            residentsTableBody.getChildren().add(row);
+            rowNumber++;
+        }
+
+        if (!hasData) {
+            Label empty = new Label("No residents found.");
+            empty.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;");
+            VBox.setMargin(empty, new Insets(20, 0, 20, 0));
+            residentsTableBody.getChildren().add(empty);
+        }
+
+        rs.close();
+        stmt.close();
+        conn.close();
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        Label error = new Label("Error loading residents: " + e.getMessage());
+        error.setStyle("-fx-font-size: 12px; -fx-text-fill: #e53935;");
+        residentsTableBody.getChildren().add(error);
+    }
+}
+
+    // ── Get Current User ID ───────────────────────────────────────────────────────
+    private int getCurrentUserId() {
+        String email = SessionManager.getEmail();
+        if (email == null) return -1;
         try {
             Connection conn = DatabaseConnection.getConnection();
-            PreparedStatement stmt;
-            if (search.isEmpty()) {
-                stmt = conn.prepareStatement("SELECT * FROM residents ORDER BY id");
-            } else {
-                stmt = conn.prepareStatement(
-                    "SELECT * FROM residents WHERE full_name LIKE ? " +
-                    "OR address LIKE ? OR resident_id LIKE ?");
-                stmt.setString(1, "%" + search + "%");
-                stmt.setString(2, "%" + search + "%");
-                stmt.setString(3, "%" + search + "%");
-            }
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT id FROM users WHERE email = ?");
+            stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
-            boolean hasData = false;
-            int rowNumber = 1;
-            while (rs.next()) {
-                hasData = true;
-                String residentId = rs.getString("resident_id");
-                String fullName   = rs.getString("full_name");
-                int age           = rs.getInt("age");
-                String address    = rs.getString("address");
-                String status     = rs.getString("status");
-                String dateAdded  = rs.getString("date_added") != null
-                    ? rs.getString("date_added") : "N/A";
-                HBox row = new HBox();
-                row.setStyle("-fx-padding: 12 0; -fx-border-color: #f8f8f8;" +
-                    "-fx-border-width: 0 0 1 0;");
-                Label idLabel = new Label(String.valueOf(rowNumber));
-                idLabel.setPrefWidth(100);
-                idLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-                Label nameLabel = new Label(fullName);
-                nameLabel.setPrefWidth(200);
-                nameLabel.setStyle(
-                    "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
-                Label ageLabel = new Label(String.valueOf(age));
-                ageLabel.setPrefWidth(80);
-                ageLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-                Label addressLabel = new Label(address);
-                addressLabel.setPrefWidth(250);
-                addressLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-                String statusColor     = status.equals("Active") ? "#e8f5e9" : "#fff8e1";
-                String statusTextColor = status.equals("Active") ? "#4caf50" : "#f59e0b";
-                Label statusLabel = new Label(status);
-                statusLabel.setPrefWidth(100);
-                statusLabel.setStyle(
-                    "-fx-background-color: " + statusColor + ";" +
-                    "-fx-text-fill: " + statusTextColor + ";" +
-                    "-fx-font-size: 11px; -fx-font-weight: bold;" +
-                    "-fx-background-radius: 4; -fx-padding: 3 8;");
-                Button viewBtn = new Button("View");
-                viewBtn.setStyle(
-                    "-fx-background-color: #f4f4f4; -fx-text-fill: #333333;" +
-                    "-fx-font-size: 11px; -fx-background-radius: 6;" +
-                    "-fx-padding: 5 12; -fx-cursor: hand;");
-                final String fResidentId = residentId;
-                final String fFullName   = fullName;
-                final int    fAge        = age;
-                final String fAddress    = address;
-                final String fStatus     = status;
-                final String fDateAdded  = dateAdded;
-                viewBtn.setOnAction(e -> {
-                    try {
-                        FXMLLoader loader = new FXMLLoader(
-                            getClass().getResource("ViewResidentModal.fxml"));
-                        Parent modalRoot = loader.load();
-                        ViewResidentController viewController = loader.getController();
-                        viewController.setResident(
-                            fResidentId, fFullName, fAge, fAddress, fStatus, fDateAdded);
-                        viewController.setOnDelete(() -> loadResidents(""));
-                        Stage modalStage = new Stage();
-                        modalStage.initModality(Modality.APPLICATION_MODAL);
-                        modalStage.initOwner(logoutButton.getScene().getWindow());
-                        modalStage.setTitle("View Resident");
-                        modalStage.setScene(new Scene(modalRoot));
-                        modalStage.setResizable(false);
-                        modalStage.showAndWait();
-                    } catch (Exception ex) { ex.printStackTrace(); }
-                });
-                row.getChildren().addAll(
-                    idLabel, nameLabel, ageLabel, addressLabel, statusLabel, viewBtn);
-                residentsTableBody.getChildren().add(row);
-                rowNumber++;
-            }
-            if (!hasData) {
-                Label empty = new Label("No residents found.");
-                empty.setStyle(
-                    "-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;");
-                VBox.setMargin(empty, new Insets(20, 0, 20, 0));
-                residentsTableBody.getChildren().add(empty);
-            }
+            int userId = rs.next() ? rs.getInt("id") : -1;
             rs.close(); stmt.close(); conn.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-            Label error = new Label("Error loading residents: " + e.getMessage());
-            error.setStyle("-fx-font-size: 12px; -fx-text-fill: #e53935;");
-            residentsTableBody.getChildren().add(error);
-        }
+            return userId;
+        } catch (Exception e) { e.printStackTrace(); return -1; }
     }
 
     // ── Notifications ─────────────────────────────────────────────────────────────
     private void cleanupNotifications() {
-        String email = SessionManager.getEmail();
-        if (email == null) return;
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
 
             PreparedStatement stmt1 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'announcement' " +
-                "AND user_email = ? AND reference_id NOT IN " +
+                "AND user_id = ? AND reference_id NOT IN " +
                 "(SELECT announcement_id FROM announcements)");
-            stmt1.setString(1, email);
+            stmt1.setInt(1, userId);
             stmt1.executeUpdate();
             stmt1.close();
 
             PreparedStatement stmt2 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'complaint' " +
-                "AND user_email = ? AND reference_id NOT IN " +
+                "AND user_id = ? AND reference_id NOT IN " +
                 "(SELECT complaint_id FROM complaints WHERE status <> 'Resolved')");
-            stmt2.setString(1, email);
+            stmt2.setInt(1, userId);
             stmt2.executeUpdate();
             stmt2.close();
 
             PreparedStatement stmt3 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'payment' " +
-                "AND user_email = ? AND reference_id NOT IN " +
+                "AND user_id = ? AND reference_id NOT IN " +
                 "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
-            stmt3.setString(1, email);
+                "WHERE status = 'Pending' AND archived = 0)");
+            stmt3.setInt(1, userId);
             stmt3.executeUpdate();
             stmt3.close();
 
@@ -211,22 +301,25 @@ public class ResidentsController {
 
     private void syncNotifications() {
         cleanupNotifications();
-        String email = SessionManager.getEmail();
-        if (email == null) return;
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
+            
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+                "SELECT p.ref_number, r.full_name FROM payments p " +
+                "JOIN residents r ON p.resident_id = r.id " +
+                "WHERE p.status = 'Pending' AND p.archived = 0"
             ).executeQuery();
             while (rs1.next()) {
                 String refNo = rs1.getString("ref_number");
                 String msg = "Pending payment from " +
-                    rs1.getString("resident_name") + " (" + refNo + ")";
-                insertIfNew(conn, "payment", msg, refNo, email);
+                    rs1.getString("full_name") + " (" + refNo + ")";
+                insertIfNew(conn, "payment", msg, refNo, userId);
             }
             rs1.close();
+            
             ResultSet rs2 = conn.prepareStatement(
                 "SELECT complaint_id, complainant_name, incident_type " +
                 "FROM complaints WHERE status <> 'Resolved'"
@@ -235,9 +328,10 @@ public class ResidentsController {
                 String cid = rs2.getString("complaint_id");
                 String msg = "Open complaint: " + rs2.getString("incident_type") +
                     " by " + rs2.getString("complainant_name");
-                insertIfNew(conn, "complaint", msg, cid, email);
+                insertIfNew(conn, "complaint", msg, cid, userId);
             }
             rs2.close();
+            
             ResultSet rs3 = conn.prepareStatement(
                 "SELECT announcement_id, title FROM announcements ORDER BY id DESC"
             ).executeQuery();
@@ -245,7 +339,7 @@ public class ResidentsController {
             while (rs3.next() && aCount < 5) {
                 String aid = rs3.getString("announcement_id");
                 String msg = "Announcement posted: " + rs3.getString("title");
-                insertIfNew(conn, "announcement", msg, aid, email);
+                insertIfNew(conn, "announcement", msg, aid, userId);
                 aCount++;
             }
             rs3.close();
@@ -255,12 +349,12 @@ public class ResidentsController {
 
     private void insertIfNew(Connection conn, String type,
                               String message, String refId,
-                              String email) throws Exception {
+                              int userId) throws Exception {
         PreparedStatement check = conn.prepareStatement(
             "SELECT notif_id FROM notifications " +
-            "WHERE reference_id = ? AND user_email = ? AND type = ?");
+            "WHERE reference_id = ? AND user_id = ? AND type = ?");
         check.setString(1, refId);
-        check.setString(2, email);
+        check.setInt(2, userId);
         check.setString(3, type);
         ResultSet rs = check.executeQuery();
         boolean exists = rs.next();
@@ -268,14 +362,14 @@ public class ResidentsController {
         if (!exists) {
             PreparedStatement ins = conn.prepareStatement(
                 "INSERT INTO notifications " +
-                "(type, message, reference_id, is_read, created_at, user_email) " +
-                "VALUES (?, ?, ?, 'false', ?, ?)");
+                "(type, message, reference_id, is_read, created_at, user_id) " +
+                "VALUES (?, ?, ?, 'No', ?, ?)");
             ins.setString(1, type);
             ins.setString(2, message);
             ins.setString(3, refId);
             ins.setString(4, LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            ins.setString(5, email);
+            ins.setInt(5, userId);
             ins.executeUpdate();
             ins.close();
         }
@@ -286,8 +380,8 @@ public class ResidentsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' " +
-                "WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = 'Yes' WHERE notif_id = ?");
+            stmt.setInt(1, Integer.parseInt(notifId));
             stmt.executeUpdate();
             stmt.close();
             conn.close();
@@ -295,15 +389,15 @@ public class ResidentsController {
     }
 
     private void refreshAlertBadge() {
-        String email = SessionManager.getEmail();
-        if (email == null) return;
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
-            stmt.setString(1, email);
+                "WHERE user_id = ? AND is_read = 'No'");
+            stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
             rs.close(); stmt.close(); conn.close();
@@ -377,17 +471,17 @@ public class ResidentsController {
 
         Runnable loadNotifs = () -> {
             notifBody.getChildren().clear();
-            String email = SessionManager.getEmail();
-            if (email == null) return;
+            int userId = getCurrentUserId();
+            if (userId == -1) return;
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT * FROM notifications WHERE user_id = ? ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_id = ? AND is_read = 'No' ORDER BY notif_id DESC";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
@@ -398,7 +492,7 @@ public class ResidentsController {
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
 
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
@@ -494,7 +588,7 @@ public class ResidentsController {
         row.setStyle(
             "-fx-padding: 16 24;" +
             "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
-            ("false".equals(isRead)
+            ("No".equals(isRead)
                 ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
                 : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
         row.setAlignment(Pos.CENTER_LEFT);
@@ -513,13 +607,13 @@ public class ResidentsController {
         Label msgLbl = new Label(message);
         msgLbl.setStyle(
             "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
-            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+            ("No".equals(isRead) ? " -fx-font-weight: bold;" : ""));
         msgLbl.setWrapText(true);
         Label dateLbl = new Label(dateStr != null ? dateStr : "");
         dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
         textBox.getChildren().addAll(msgLbl, dateLbl);
 
-        if ("false".equals(isRead)) {
+        if ("No".equals(isRead)) {
             Circle dot = new Circle(4);
             dot.setStyle("-fx-fill: #1565c0;");
             row.getChildren().addAll(iconBox, textBox, dot);
@@ -603,7 +697,7 @@ public class ResidentsController {
             "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
             "-fx-alignment: CENTER_LEFT;");
         goToBtn.setOnAction(e -> {
-            if ("false".equals(isRead)) markOneAsRead(notifId);
+            if ("No".equals(isRead)) markOneAsRead(notifId);
             detail.close();
             alertStage.close();
             Stage stage = (Stage) logoutButton.getScene().getWindow();
@@ -630,7 +724,7 @@ public class ResidentsController {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
-        if ("true".equals(isRead)) {
+        if ("Yes".equals(isRead)) {
             footer.getChildren().add(cancelBtn);
         } else {
             markBtn.setOnAction(e -> {
@@ -677,7 +771,7 @@ public class ResidentsController {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
-    // ── Navigation ─────────────────────────────────────────────────────────────��──
+    // ── Navigation ────────────────────────────────────────────────────────────────
     @FXML private void goToDashboard() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "AdminDashboard.fxml", true, getClass());

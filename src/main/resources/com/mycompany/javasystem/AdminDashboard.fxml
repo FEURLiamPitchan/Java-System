@@ -251,7 +251,7 @@
                                                   -fx-background-radius: 10; -fx-padding: 10;">
                                     <Label text="⏳" style="-fx-font-size: 16px;"/>
                                 </StackPane>
-                                <Label text="PENDING REQUESTS"
+                                <Label text="PENDING PAYMENTS"
                                        style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #bbbbbb;"/>
                             </HBox>
                             <Label fx:id="pendingRequestsLabel" text="0"
@@ -374,9 +374,9 @@
                                  -fx-padding: 22;">
                         <HBox alignment="CENTER_LEFT">
                             <VBox HBox.hgrow="ALWAYS" spacing="3">
-                                <Label text="Recent Document Requests"
+                                <Label text="Recent Requests"
                                        style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
-                                <Label text="Last 5 payment requests"
+                                <Label text="Payments &amp; Document requests"
                                        style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
                             </VBox>
                             <Button text="View All" onAction="#goToPayments"

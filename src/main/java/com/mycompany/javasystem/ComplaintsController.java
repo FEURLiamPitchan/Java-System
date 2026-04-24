@@ -86,7 +86,7 @@ public class ComplaintsController {
 
     @FXML
     public void initialize() {
-        filterStatus.getItems().addAll("All", "Pending", "Under Review", "Resolved");
+        filterStatus.getItems().addAll("All", "Pending", "In Progress", "Resolved", "Closed");
         filterStatus.setValue("All");
         filterType.getItems().addAll("All", "Noise Complaint", "Property Dispute",
                 "Public Disturbance", "Infrastructure Issue", "Other");
@@ -291,7 +291,7 @@ public class ComplaintsController {
                 "DELETE FROM notifications WHERE type = 'payment' " +
                 "AND user_email = ? AND reference_id NOT IN " +
                 "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
+                "WHERE status = 'Pending' AND archived = 0)");
             stmt3.setString(1, email);
             int d3 = stmt3.executeUpdate();
             stmt3.close();
@@ -310,13 +310,12 @@ public class ComplaintsController {
             conn.setAutoCommit(true);
 
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+                "SELECT ref_number FROM payments " +
+                "WHERE status = 'Pending' AND archived = 0"
             ).executeQuery();
             while (rs1.next()) {
                 String refNo = rs1.getString("ref_number");
-                String msg = "Pending payment from " +
-                    rs1.getString("resident_name") + " (" + refNo + ")";
+                String msg = "Pending payment " + refNo;
                 insertIfNew(conn, "payment", msg, refNo, email);
             }
             rs1.close();
@@ -383,8 +382,8 @@ public class ComplaintsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' " +
-                "WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = 'true' WHERE notif_id = ?");
+            stmt.setString(1, notifId);
             int updated = stmt.executeUpdate();
             System.out.println("[Read] notif_id=" + notifId + " updated=" + updated);
             stmt.close();
@@ -399,8 +398,7 @@ public class ComplaintsController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
+                "SELECT COUNT(*) FROM notifications WHERE user_email = ? AND is_read = 'false'");
             stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
@@ -482,11 +480,11 @@ public class ComplaintsController {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT * FROM notifications WHERE user_email = ? ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_email = ? AND is_read = 'false' ORDER BY notif_id DESC";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, email);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
@@ -497,7 +495,7 @@ public class ComplaintsController {
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
 
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
@@ -747,26 +745,25 @@ public class ComplaintsController {
         detail.showAndWait();
     }
 
-    // ── EXISTING METHODS ───────────────────────────────────────────────────────────
-
+    // ── SUMMARY ────────────────────────────────────────────────────────────────────
     private void loadSummary() {
         try {
             Connection conn = DatabaseConnection.getConnection();
             ResultSet rs = conn.prepareStatement(
                 "SELECT status, COUNT(*) as cnt FROM complaints GROUP BY status").executeQuery();
-            int total = 0, pending = 0, underReview = 0, resolved = 0;
+            int total = 0, pending = 0, inProgress = 0, resolved = 0;
             while (rs.next()) {
                 int cnt = rs.getInt("cnt");
                 total += cnt;
                 switch (rs.getString("status")) {
                     case "Pending": pending = cnt; break;
-                    case "Under Review": underReview = cnt; break;
+                    case "In Progress": inProgress = cnt; break;
                     case "Resolved": resolved = cnt; break;
                 }
             }
             totalLabel.setText(String.valueOf(total));
             pendingLabel.setText(String.valueOf(pending));
-            underReviewLabel.setText(String.valueOf(underReview));
+            underReviewLabel.setText(String.valueOf(inProgress));
             resolvedLabel.setText(String.valueOf(resolved));
             rs.close();
             conn.close();
@@ -775,6 +772,7 @@ public class ComplaintsController {
         }
     }
 
+    // ── LOAD COMPLAINTS ────────────────────────────────────────────────────────────
     private void loadComplaints() {
         allComplaints.clear();
         String search = searchField.getText().trim();
@@ -874,6 +872,7 @@ public class ComplaintsController {
         renderRows(pageData);
     }
 
+    // ── RENDER ROWS ────────────────────────────────────────────────────────────────
     private void renderRows(List<String[]> data) {
         complaintsTableBody.getChildren().clear();
 
@@ -893,9 +892,9 @@ public class ComplaintsController {
             String statusChangedAt = c[10];
 
             HBox row = new HBox();
+            // FIXED: Don't highlight based on isRead - all rows same background
             row.setStyle("-fx-padding: 14 0; -fx-border-color: #f8f8f8;" +
-                    "-fx-border-width: 0 0 1 0; -fx-background-color: " +
-                    (!isRead ? "#fffde7" : "transparent") + ";");
+                    "-fx-border-width: 0 0 1 0; -fx-background-color: transparent;");
 
             Label idLabel = new Label(complaintId);
             idLabel.setPrefWidth(100);
@@ -924,12 +923,16 @@ public class ComplaintsController {
             dateLabel.setPrefWidth(120);
             dateLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #555555;");
 
+            // FIXED: Distinct colors for each status
             String statusBg, statusFg;
             switch (complaintStatus) {
-                case "Resolved":    statusBg = "#e8f5e9"; statusFg = "#4caf50"; break;
-                case "Under Review": statusBg = "#e3f2fd"; statusFg = "#1e88e5"; break;
-                default:            statusBg = "#fff8e1"; statusFg = "#f59e0b"; break;
+                case "Pending":       statusBg = "#fff3cd"; statusFg = "#856404"; break;  // Amber/Orange
+                case "In Progress":   statusBg = "#ffe0b2"; statusFg = "#e65100"; break;  // Orange (darker)
+                case "Resolved":      statusBg = "#c8e6c9"; statusFg = "#2e7d32"; break;  // Green
+                case "Closed":        statusBg = "#f3e5f5"; statusFg = "#6a1b9a"; break;  // Purple
+                default:              statusBg = "#e0e0e0"; statusFg = "#424242"; break;  // Gray
             }
+            
             Label statusLabel = new Label(complaintStatus);
             statusLabel.setStyle("-fx-background-color: " + statusBg + ";" +
                     "-fx-text-fill: " + statusFg + ";" +
@@ -969,6 +972,7 @@ public class ComplaintsController {
         }
     }
 
+    // ── OPEN RESIDENT PROFILE ──────────────────────────────────────────────────────
     private void openResidentProfile(String complaintId, String name) {
         try {
             Connection conn = DatabaseConnection.getConnection();
@@ -993,23 +997,33 @@ public class ComplaintsController {
             }
 
             PreparedStatement stmt2 = conn.prepareStatement(
-                "SELECT resident_id, full_name, age, address, status, date_added FROM residents WHERE resident_id = ?");
+                "SELECT id, resident_id, full_name, age, address, status, date_added, " +
+                "gender, birth_place, birth_date, civil_status, contact_number " +
+                "FROM residents WHERE resident_id = ?");
             stmt2.setString(1, residentId);
             ResultSet rs2 = stmt2.executeQuery();
 
             if (rs2.next()) {
+                int id = rs2.getInt("id");
                 String fullName = rs2.getString("full_name");
                 int age = rs2.getInt("age");
                 String address = rs2.getString("address");
                 String status = rs2.getString("status");
                 String dateAdded = rs2.getString("date_added");
+                String gender = rs2.getString("gender") != null ? rs2.getString("gender") : "N/A";
+                String birthPlace = rs2.getString("birth_place") != null ? rs2.getString("birth_place") : "N/A";
+                String birthDate = rs2.getString("birth_date") != null ? rs2.getString("birth_date") : "N/A";
+                String civilStatus = rs2.getString("civil_status") != null ? rs2.getString("civil_status") : "N/A";
+                String contactNumber = rs2.getString("contact_number") != null ? rs2.getString("contact_number") : "N/A";
+                
                 rs2.close(); stmt2.close(); conn.close();
 
                 FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("ViewResidentModal.fxml"));
                 Parent root = loader.load();
                 ViewResidentController ctrl = loader.getController();
-                ctrl.setResident(residentId, fullName, age, address, status, dateAdded);
+                ctrl.setResident(id, fullName, age, address, status, dateAdded,
+                               gender, birthPlace, birthDate, civilStatus, contactNumber);
 
                 Stage stage = new Stage();
                 stage.initModality(Modality.APPLICATION_MODAL);
@@ -1035,6 +1049,7 @@ public class ComplaintsController {
         alert.showAndWait();
     }
 
+    // ── OPEN COMPLAINT MODAL ───────────────────────────────────────────────────────
     private void openComplaintModal(String complaintId, String name, String type,
             String location, String date, String status, String details,
             String photoPath, String adminResponse) {
@@ -1067,7 +1082,7 @@ public class ComplaintsController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE complaints SET status_changed_at = Now() WHERE complaint_id = ?");
+                "UPDATE complaints SET status_changed_at = NOW() WHERE complaint_id = ?");
             stmt.setString(1, complaintId);
             stmt.executeUpdate();
             stmt.close();
@@ -1077,6 +1092,7 @@ public class ComplaintsController {
         }
     }
 
+    // ── DELETE COMPLAINT ───────────────────────────────────────────────────────────
     private void deleteComplaint(String complaintId) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Delete Complaint");
@@ -1102,6 +1118,7 @@ public class ComplaintsController {
         });
     }
 
+    // ── FILTERING & SEARCH ─────────────────────────────────────────────────────────
     @FXML private void handleSearch() { currentPage = 1; loadComplaints(); }
     @FXML private void handleFilter() { currentPage = 1; loadComplaints(); }
 
@@ -1116,12 +1133,23 @@ public class ComplaintsController {
         loadComplaints();
     }
 
-    @FXML private void handlePrev() { if (currentPage > 1) { currentPage--; applySortAndRender(); } }
+    // ── PAGINATION ─────────────────────────────────────────────────────────────────
+    @FXML private void handlePrev() { 
+        if (currentPage > 1) { 
+            currentPage--; 
+            applySortAndRender(); 
+        } 
+    }
+    
     @FXML private void handleNext() {
         int totalPages = Math.max(1, (int) Math.ceil((double) allComplaints.size() / PAGE_SIZE));
-        if (currentPage < totalPages) { currentPage++; applySortAndRender(); }
+        if (currentPage < totalPages) { 
+            currentPage++; 
+            applySortAndRender(); 
+        }
     }
 
+    // ── SORTING ────────────────────────────────────────────────────────────────────
     @FXML private void sortById()     { toggleSort("id");     }
     @FXML private void sortByName()   { toggleSort("name");   }
     @FXML private void sortByType()   { toggleSort("type");   }
@@ -1135,6 +1163,7 @@ public class ComplaintsController {
         applySortAndRender();
     }
 
+    // ── EXPORT PDF ─────────────────────────────────────────────────────────────────
     @FXML
     private void handleExportPDF() {
         FileChooser chooser = new FileChooser();
@@ -1206,6 +1235,7 @@ public class ComplaintsController {
         }
     }
 
+    // ── NAVIGATION ─────────────────────────────────────────────────────────────────
     @FXML private void goToDashboard() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "AdminDashboard.fxml", true, getClass());

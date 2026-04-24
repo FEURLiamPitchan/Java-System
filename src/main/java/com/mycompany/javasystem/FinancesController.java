@@ -74,6 +74,9 @@ public class FinancesController {
     @FXML private ScrollPane mainScrollPane;
     @FXML private BorderPane rootPane;
 
+    // ✅ Store pie chart data globally for tooltip access
+    private Map<String, double[]> pieChartDataMap = new LinkedHashMap<>();
+
     @FXML
     public void initialize() {
         filterType.getItems().addAll("All", "Income", "Expense");
@@ -400,117 +403,140 @@ public class FinancesController {
     }
 
     // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
-    private void cleanupNotifications() {
-        String email = SessionManager.getEmail();
-        if (email == null) return;
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(true);
-
-            PreparedStatement stmt1 = conn.prepareStatement(
-                "DELETE FROM notifications WHERE type = 'announcement' " +
-                "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT announcement_id FROM announcements)");
-            stmt1.setString(1, email);
-            int d1 = stmt1.executeUpdate();
-            stmt1.close();
-
-            PreparedStatement stmt2 = conn.prepareStatement(
-                "DELETE FROM notifications WHERE type = 'complaint' " +
-                "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT complaint_id FROM complaints WHERE status <> 'Resolved')");
-            stmt2.setString(1, email);
-            int d2 = stmt2.executeUpdate();
-            stmt2.close();
-
-            PreparedStatement stmt3 = conn.prepareStatement(
-                "DELETE FROM notifications WHERE type = 'payment' " +
-                "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
-            stmt3.setString(1, email);
-            int d3 = stmt3.executeUpdate();
-            stmt3.close();
-
-            conn.close();
-            System.out.println("[Cleanup] Removed " + (d1+d2+d3) + " stale notifications");
-        } catch (Exception e) { e.printStackTrace(); }
-    }
-
     private void syncNotifications() {
-        cleanupNotifications();
         String email = SessionManager.getEmail();
-        if (email == null) return;
+        if (email == null) {
+            System.out.println("[Sync] No email in session");
+            return;
+        }
+        
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
 
-            ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+            // ✅ Get user ID from email
+            PreparedStatement getUserStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            getUserStmt.setString(1, email);
+            ResultSet userRs = getUserStmt.executeQuery();
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+            userRs.close();
+            getUserStmt.close();
+
+            System.out.println("[Sync] User ID for " + email + ": " + userId);
+
+            if (userId == -1) {
+                conn.close();
+                System.out.println("[Sync] User not found!");
+                return;
+            }
+
+            // ✅ Delete old notifications (cleanup)
+            PreparedStatement deleteOld = conn.prepareStatement(
+                "DELETE FROM notifications WHERE user_id = ? AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+            deleteOld.setInt(1, userId);
+            deleteOld.executeUpdate();
+            deleteOld.close();
+
+            // ✅ Sync pending DOCUMENT REQUESTS
+            System.out.println("[Sync] Syncing pending document requests...");
+            ResultSet rs0 = conn.prepareStatement(
+                "SELECT id, document_type FROM document_requests WHERE status = 'Pending'"
             ).executeQuery();
+            int docCount = 0;
+            while (rs0.next()) {
+                String docId = String.valueOf(rs0.getInt("id"));
+                String docType = rs0.getString("document_type");
+                String msg = "📋 Pending document request: " + docType;
+                insertIfNew(conn, "document", msg, docId, userId);
+                docCount++;
+            }
+            rs0.close();
+            System.out.println("[Sync] Found " + docCount + " pending document requests");
+
+            // ✅ Sync pending payments
+            System.out.println("[Sync] Syncing pending payments...");
+            ResultSet rs1 = conn.prepareStatement(
+                "SELECT id, ref_number FROM payments WHERE status = 'Pending' AND archived = 0"
+            ).executeQuery();
+            int paymentCount = 0;
             while (rs1.next()) {
                 String refNo = rs1.getString("ref_number");
-                String msg = "Pending payment from " +
-                    rs1.getString("resident_name") + " (" + refNo + ")";
-                insertIfNew(conn, "payment", msg, refNo, email);
+                String paymentId = String.valueOf(rs1.getInt("id"));
+                String msg = "💳 Pending payment: " + refNo;
+                insertIfNew(conn, "payment", msg, paymentId, userId);
+                paymentCount++;
             }
             rs1.close();
+            System.out.println("[Sync] Found " + paymentCount + " pending payments");
 
+            // ✅ Sync open complaints
+            System.out.println("[Sync] Syncing open complaints...");
             ResultSet rs2 = conn.prepareStatement(
-                "SELECT complaint_id, complainant_name, incident_type " +
-                "FROM complaints WHERE status <> 'Resolved'"
+                "SELECT id, incident_type FROM complaints WHERE status <> 'Resolved'"
             ).executeQuery();
+            int complaintCount = 0;
             while (rs2.next()) {
-                String cid = rs2.getString("complaint_id");
-                String msg = "Open complaint: " + rs2.getString("incident_type") +
-                    " by " + rs2.getString("complainant_name");
-                insertIfNew(conn, "complaint", msg, cid, email);
+                String cid = String.valueOf(rs2.getInt("id"));
+                String incidentType = rs2.getString("incident_type");
+                String msg = "📢 Open complaint: " + incidentType;
+                insertIfNew(conn, "complaint", msg, cid, userId);
+                complaintCount++;
             }
             rs2.close();
+            System.out.println("[Sync] Found " + complaintCount + " open complaints");
 
+            // ✅ Sync recent announcements
+            System.out.println("[Sync] Syncing announcements...");
             ResultSet rs3 = conn.prepareStatement(
-                "SELECT announcement_id, title FROM announcements ORDER BY id DESC"
+                "SELECT id, title FROM announcements ORDER BY id DESC LIMIT 5"
             ).executeQuery();
-            int aCount = 0;
-            while (rs3.next() && aCount < 5) {
-                String aid = rs3.getString("announcement_id");
-                String msg = "Announcement posted: " + rs3.getString("title");
-                insertIfNew(conn, "announcement", msg, aid, email);
-                aCount++;
+            int announcementCount = 0;
+            while (rs3.next()) {
+                String aid = String.valueOf(rs3.getInt("id"));
+                String title = rs3.getString("title");
+                String msg = "📣 Announcement: " + title;
+                insertIfNew(conn, "announcement", msg, aid, userId);
+                announcementCount++;
             }
             rs3.close();
+            System.out.println("[Sync] Found " + announcementCount + " announcements");
+
             conn.close();
-        } catch (Exception e) { e.printStackTrace(); }
+            System.out.println("[Sync] Notification sync complete!");
+        } catch (Exception e) {
+            System.out.println("[Sync] Error: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void insertIfNew(Connection conn, String type,
-                              String message, String refId,
-                              String email) throws Exception {
+                              String message, String refId, int userId) throws Exception {
         PreparedStatement check = conn.prepareStatement(
-            "SELECT notif_id FROM notifications " +
-            "WHERE reference_id = ? AND user_email = ? AND type = ?");
+            "SELECT id FROM notifications WHERE reference_id = ? AND user_id = ? AND type = ?");
         check.setString(1, refId);
-        check.setString(2, email);
+        check.setInt(2, userId);
         check.setString(3, type);
         ResultSet rs = check.executeQuery();
         boolean exists = rs.next();
-        rs.close(); check.close();
+        rs.close(); 
+        check.close();
 
         if (!exists) {
             PreparedStatement ins = conn.prepareStatement(
-                "INSERT INTO notifications " +
-                "(type, message, reference_id, is_read, created_at, user_email) " +
-                "VALUES (?, ?, ?, 'false', ?, ?)");
+                "INSERT INTO notifications (type, message, reference_id, is_read, created_at, user_id) " +
+                "VALUES (?, ?, ?, 0, ?, ?)");
             ins.setString(1, type);
             ins.setString(2, message);
             ins.setString(3, refId);
             ins.setString(4, LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            ins.setString(5, email);
+            ins.setInt(5, userId);
             ins.executeUpdate();
             ins.close();
-            System.out.println("[Notif] New: " + type + " - " + refId);
+            System.out.println("[Notif] New: " + type + " - " + refId + " - " + message);
+        } else {
+            System.out.println("[Notif] Already exists: " + type + " - " + refId);
         }
     }
 
@@ -519,8 +545,8 @@ public class FinancesController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' " +
-                "WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = 1 WHERE id = ?");
+            stmt.setInt(1, Integer.parseInt(notifId));
             int updated = stmt.executeUpdate();
             System.out.println("[Read] notif_id=" + notifId + " updated=" + updated);
             stmt.close();
@@ -534,14 +560,28 @@ public class FinancesController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
+            
+            // ✅ Get user ID first
+            PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+            userStmt.setString(1, email);
+            ResultSet userRs = userStmt.executeQuery();
+            int userId = -1;
+            if (userRs.next()) userId = userRs.getInt("id");
+            userRs.close();
+            userStmt.close();
+            
+            if (userId == -1) {
+                conn.close();
+                return;
+            }
+            
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
-            stmt.setString(1, email);
+                "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+            stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
             rs.close(); stmt.close(); conn.close();
-            System.out.println("[Badge] Unread count = " + count);
+            System.out.println("[Badge] Unread count for user " + userId + " = " + count);
             if (count > 0) {
                 alertBadge.setText(count > 99 ? "99+" : String.valueOf(count));
                 alertBadge.setVisible(true);
@@ -587,7 +627,7 @@ public class FinancesController {
             "-fx-background-color: #2d2d2d; -fx-text-fill: #ffffff;" +
             "-fx-font-size: 11px; -fx-font-weight: bold;" +
             "-fx-background-radius: 20; -fx-padding: 5 14; -fx-cursor: hand;");
-        Button pastBtn = new Button("Past Notifications");
+        Button pastBtn = new Button("All Notifications");
         pastBtn.setStyle(
             "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
             "-fx-font-size: 11px; -fx-background-radius: 20;" +
@@ -613,34 +653,63 @@ public class FinancesController {
         Runnable loadNotifs = () -> {
             notifBody.getChildren().clear();
             String email = SessionManager.getEmail();
-            if (email == null) return;
+            if (email == null) {
+                System.out.println("[Notif Load] No email");
+                return;
+            }
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
+                
+                // ✅ Get user ID
+                PreparedStatement userStmt = conn.prepareStatement("SELECT id FROM users WHERE email = ?");
+                userStmt.setString(1, email);
+                ResultSet userRs = userStmt.executeQuery();
+                int userId = -1;
+                if (userRs.next()) userId = userRs.getInt("id");
+                userRs.close();
+                userStmt.close();
+
+                System.out.println("[Notif Load] User ID: " + userId);
+
+                if (userId == -1) {
+                    conn.close();
+                    VBox empty = new VBox(8);
+                    empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
+                    Label emptyLbl = new Label("User not found");
+                    emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
+                    empty.getChildren().add(emptyLbl);
+                    notifBody.getChildren().add(empty);
+                    return;
+                }
+
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT id, type, message, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY id DESC"
+                    : "SELECT id, type, message, is_read, created_at FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY id DESC";
+                
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
-                        rs.getString("notif_id"),
+                        rs.getString("id"),
                         rs.getString("type"),
                         rs.getString("message"),
                         rs.getString("is_read"),
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
+
+                System.out.println("[Notif Load] Found " + items.size() + " notifications");
 
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
                     empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");
                     Label emptyLbl = new Label(
                         showingPast[0]
-                            ? "No past notifications."
+                            ? "No notifications yet"
                             : "You're all caught up! 🎉");
                     emptyLbl.setStyle("-fx-font-size: 13px; -fx-text-fill: #aaaaaa;");
                     empty.getChildren().add(emptyLbl);
@@ -651,7 +720,10 @@ public class FinancesController {
                             buildNotifItem(item, loadNotifsRef,
                                 showingPast, alertStage));
                 }
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                System.out.println("[Notif Load] Error: " + e.getMessage());
+                e.printStackTrace();
+            }
         };
 
         loadNotifsRef[0] = loadNotifs;
@@ -723,13 +795,14 @@ public class FinancesController {
         String icon, bg;
         if ("complaint".equals(type))    { icon = "📢"; bg = "#ffebee"; }
         else if ("payment".equals(type)) { icon = "💳"; bg = "#fff8e1"; }
+        else if ("document".equals(type)) { icon = "📋"; bg = "#f3e5f5"; }
         else                             { icon = "📣"; bg = "#e3f2fd"; }
 
         HBox row = new HBox(14);
         row.setStyle(
             "-fx-padding: 16 24;" +
             "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
-            ("false".equals(isRead)
+            ("0".equals(isRead)
                 ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
                 : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
         row.setAlignment(Pos.CENTER_LEFT);
@@ -748,13 +821,13 @@ public class FinancesController {
         Label msgLbl = new Label(message);
         msgLbl.setStyle(
             "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
-            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+            ("0".equals(isRead) ? " -fx-font-weight: bold;" : ""));
         msgLbl.setWrapText(true);
         Label dateLbl = new Label(dateStr != null ? dateStr : "");
         dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
         textBox.getChildren().addAll(msgLbl, dateLbl);
 
-        if ("false".equals(isRead)) {
+        if ("0".equals(isRead)) {
             Circle dot = new Circle(4);
             dot.setStyle("-fx-fill: #1565c0;");
             row.getChildren().addAll(iconBox, textBox, dot);
@@ -794,7 +867,8 @@ public class FinancesController {
         header.setStyle("-fx-background-color: #1a1a1a; -fx-padding: 22 28;");
         Label titleLbl = new Label(
             "complaint".equals(type) ? "Complaint Alert" :
-            "payment".equals(type)   ? "Payment Alert"   : "Announcement");
+            "payment".equals(type)   ? "Payment Alert" :
+            "document".equals(type)  ? "Document Request Alert" : "Announcement");
         titleLbl.setStyle(
             "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #ffffff;");
         Label dateLbl = new Label(dateStr != null ? dateStr : "");
@@ -827,11 +901,13 @@ public class FinancesController {
         // Go to page button
         String goToLabel =
             "complaint".equals(type)   ? "→  Go to Complaints" :
-            "payment".equals(type)     ? "→  Go to Payments"   :
+            "payment".equals(type)     ? "→  Go to Payments" :
+            "document".equals(type)    ? "→  Go to Documents"   :
                                          "→  Go to Announcements";
         String goToFxml =
             "complaint".equals(type)   ? "Complaints.fxml" :
-            "payment".equals(type)     ? "Payments.fxml"   :
+            "payment".equals(type)     ? "Payments.fxml" :
+            "document".equals(type)    ? "Documents.fxml"   :
                                          "Announcements.fxml";
 
         Button goToBtn = new Button(goToLabel);
@@ -843,7 +919,7 @@ public class FinancesController {
             "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
             "-fx-alignment: CENTER_LEFT;");
         goToBtn.setOnAction(e -> {
-            if ("false".equals(isRead)) markOneAsRead(notifId);
+            if ("0".equals(isRead)) markOneAsRead(notifId);
             detail.close();
             alertStage.close();
             Stage stage = (Stage) logoutButton.getScene().getWindow();
@@ -871,7 +947,7 @@ public class FinancesController {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
-        if ("true".equals(isRead)) {
+        if ("1".equals(isRead)) {
             // Already read — only show Close
             footer.getChildren().add(cancelBtn);
         } else {
@@ -1009,26 +1085,27 @@ public class FinancesController {
         });
     }
 
-    // ── Summary ──────────────────────────────────────────────────��────────────────
+    // ── Summary ──────────────────────────────────────────────────────────────────
     private void loadSummary() {
         double totalIncome = 0, totalExpenses = 0;
         int pending = 0;
         try {
             Connection conn = DatabaseConnection.getConnection();
+            
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT SUM(amount) AS total FROM payments WHERE status = 'Paid'"
+                "SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE status = 'Paid'"
             ).executeQuery();
             if (rs1.next()) totalIncome = rs1.getDouble("total");
             rs1.close();
 
             ResultSet rs2 = conn.prepareStatement(
-                "SELECT COUNT(*) AS cnt FROM payments WHERE status = 'Pending'"
+                "SELECT COUNT(*) AS cnt FROM payments WHERE status = 'Pending' AND archived = 0"
             ).executeQuery();
             if (rs2.next()) pending = rs2.getInt("cnt");
             rs2.close();
 
             ResultSet rs3 = conn.prepareStatement(
-                "SELECT SUM(amount) AS total FROM finances WHERE type = 'Expense'"
+                "SELECT COALESCE(SUM(amount), 0) AS total FROM finances WHERE type = 'Expense'"
             ).executeQuery();
             if (rs3.next()) totalExpenses = rs3.getDouble("total");
             rs3.close();
@@ -1045,7 +1122,7 @@ public class FinancesController {
         pendingLabel.setText(String.valueOf(pending));
     }
 
-    // ── Bar Chart ─────────────────────────────────────────────────────────────────
+    // ── Bar Chart ────────────────────────────────────���────────────────────────────
     private void loadBarChart() {
         barChart.getData().clear();
         barChart.setLegendVisible(true);
@@ -1152,69 +1229,124 @@ public class FinancesController {
     // ── Pie Chart ─────────────────────────────────────────────────────────────────
     private void loadPieChart() {
         pieChart.getData().clear();
-        Map<String, double[]> typeMap = new LinkedHashMap<>();
-        typeMap.put("Clearance", new double[]{0, 0});
-        typeMap.put("Indigency",  new double[]{0, 0});
-        typeMap.put("Residency",  new double[]{0, 0});
-
+        pieChart.setLegendVisible(true);
+        pieChartDataMap.clear();
+        
+        // ✅ DYNAMIC color palette
+        String[] colors = {"#43a047", "#1e88e5", "#fdd835", "#e53935", "#9c27b0", "#ff7043", "#00bcd4", "#ff9800"};
+        Map<String, String> colorMap = new LinkedHashMap<>();
+        
         try {
             Connection conn = DatabaseConnection.getConnection();
+            
+            // ✅ Query ALL payment types with their total amounts
             ResultSet rs = conn.prepareStatement(
-                "SELECT payment_type, SUM(amount) AS total, COUNT(*) AS cnt " +
-                "FROM payments WHERE status = 'Paid' GROUP BY payment_type"
+                "SELECT IFNULL(payment_type, 'Unknown') AS payment_type, " +
+                "COALESCE(SUM(amount), 0) AS total, " +
+                "COUNT(*) AS cnt " +
+                "FROM payments " +
+                "WHERE archived = 0 " +
+                "GROUP BY IFNULL(payment_type, 'Unknown') " +
+                "ORDER BY total DESC"
             ).executeQuery();
+            
+            System.out.println("[PieChart] Loading all payment types...");
+            List<String[]> allPaymentData = new ArrayList<>();
+            
             while (rs.next()) {
                 String type = rs.getString("payment_type");
-                if (typeMap.containsKey(type)) {
-                    typeMap.get(type)[0] = rs.getDouble("total");
-                    typeMap.get(type)[1] = rs.getInt("cnt");
-                }
+                double total = rs.getDouble("total");
+                int cnt = rs.getInt("cnt");
+                
+                System.out.println("[PieChart] Found: " + type + " | Amount: ₱" + total + " | Count: " + cnt);
+                
+                // Store for later use
+                allPaymentData.add(new String[]{type, String.valueOf(total), String.valueOf(cnt)});
             }
             rs.close();
-            conn.close();
-        } catch (Exception e) { e.printStackTrace(); }
-
-        // ✅ FIXED: Map colors directly to payment types
-        Map<String, String> colorMap = new LinkedHashMap<>();
-        colorMap.put("Clearance", "#43a047");   // GREEN
-        colorMap.put("Indigency", "#1e88e5");   // BLUE
-        colorMap.put("Residency", "#fdd835");   // YELLOW
-
-        for (Map.Entry<String, double[]> entry : typeMap.entrySet()) {
-            double amt = entry.getValue()[0];
-            int    cnt = (int) entry.getValue()[1];
-            if (amt > 0) {
-                PieChart.Data slice = new PieChart.Data(entry.getKey(), amt);
+            
+            // ✅ Assign colors to each type
+            int colorIndex = 0;
+            for (String[] data : allPaymentData) {
+                String type = data[0];
+                colorMap.put(type, colors[colorIndex % colors.length]);
+                System.out.println("[PieChart] Color for " + type + ": " + colors[colorIndex % colors.length]);
+                colorIndex++;
+            }
+            
+            // ✅ Add all types to pie chart, even if zero
+            System.out.println("[PieChart] Adding " + allPaymentData.size() + " types to pie chart");
+            for (String[] data : allPaymentData) {
+                String type = data[0];
+                double total = Double.parseDouble(data[1]);
+                int cnt = Integer.parseInt(data[2]);
+                
+                // ✅ Store in global map for tooltip access
+                pieChartDataMap.put(type, new double[]{total, cnt});
+                
+                // Use 1 as minimum value for visibility if amount is 0
+                double displayValue = (total > 0) ? total : 0.1;
+                
+                PieChart.Data slice = new PieChart.Data(type, displayValue);
                 pieChart.getData().add(slice);
-                final String color = colorMap.get(entry.getKey());
-                final String tipText = "📄 " + entry.getKey() +
-                    "\n₱" + String.format("%,.2f", amt) +
-                    "\n" + cnt + " payment" + (cnt != 1 ? "s" : "");
-
+                
+                final String color = colorMap.get(type);
+                final String typeName = type;
+                final double amount = total;
+                final int count = cnt;
+                
                 slice.nodeProperty().addListener((obs, old, node) -> {
                     if (node != null) {
-                        // ✅ Force the color with high priority
+                        System.out.println("[PieChart] Styling node for " + typeName + " with color " + color);
                         node.setStyle("-fx-pie-color: " + color + " !important;");
-
+                        
+                        // ✅ Create tooltip with stored data
+                        String tipText = "📄 " + typeName +
+                            "\n₱" + String.format("%,.2f", amount) +
+                            "\n" + count + " payment" + (count != 1 ? "s" : "");
+                        
                         Tooltip tip = new Tooltip(tipText);
                         tip.setStyle("-fx-font-size: 12px; -fx-background-color: #1a1a1a;" +
-                            "-fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 8 12;");
-                        tip.setShowDelay(Duration.millis(80));
-                        tip.setHideDelay(Duration.millis(200));
+                            "-fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 10 12;");
+                        tip.setShowDelay(Duration.millis(200));
+                        tip.setHideDelay(Duration.millis(1000));
                         Tooltip.install(node, tip);
-
-                        node.setOnMouseEntered(e -> node.setStyle(
-                            "-fx-pie-color: " + color + "; -fx-opacity: 0.8;"));
-                        node.setOnMouseExited(e -> node.setStyle(
-                            "-fx-pie-color: " + color + "; -fx-opacity: 1.0;"));
+                        
+                        node.setOnMouseEntered(e -> {
+                            node.setStyle("-fx-pie-color: " + color + "; -fx-opacity: 0.7;");
+                        });
+                        node.setOnMouseExited(e -> {
+                            node.setStyle("-fx-pie-color: " + color + "; -fx-opacity: 1.0;");
+                        });
                     }
                 });
             }
+            
+            System.out.println("[PieChart] Pie chart loaded with " + allPaymentData.size() + " types");
+            
+            conn.close();
+        } catch (Exception e) {
+            System.out.println("[PieChart] Database error: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        // ✅ If no data, add empty state
-        if (pieChart.getData().isEmpty())
-            pieChart.getData().add(new PieChart.Data("No data yet", 1));
+        // ✅ If NO data found at all, show empty state
+        if (pieChart.getData().isEmpty()) {
+            System.out.println("[PieChart] ⚠️ NO PAYMENT DATA FOUND");
+            PieChart.Data emptySlice = new PieChart.Data("No Data Available", 1);
+            pieChart.getData().add(emptySlice);
+            
+            emptySlice.nodeProperty().addListener((obs, old, node) -> {
+                if (node != null) {
+                    node.setStyle("-fx-pie-color: #e0e0e0 !important;");
+                    
+                    Tooltip emptyTip = new Tooltip("No payments recorded yet.");
+                    emptyTip.setStyle("-fx-font-size: 11px; -fx-background-color: #666666;" +
+                        "-fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 6 10;");
+                    Tooltip.install(node, emptyTip);
+                }
+            });
+        }
     }
 
     // ── Load Transactions ─────────────────────────────────────────────────────────
@@ -1233,25 +1365,26 @@ public class FinancesController {
 
             if (type.equals("All") || type.equals("Income")) {
                 StringBuilder sql = new StringBuilder(
-                    "SELECT payment_id, ref_number, resident_name, payment_type, " +
-                    "amount, status, date_created FROM payments WHERE 1=1");
+                    "SELECT p.id, p.ref_number, r.full_name, p.payment_type, " +
+                    "p.amount, p.status, p.date_created FROM payments p " +
+                    "LEFT JOIN residents r ON p.resident_id = r.id WHERE 1=1");
                 if (!status.equals("All"))
-                    sql.append(" AND status = '").append(status).append("'");
+                    sql.append(" AND p.status = '").append(status).append("'");
                 if (from != null)
-                    sql.append(" AND date_created >= #").append(from).append("#");
+                    sql.append(" AND DATE(p.date_created) >= '").append(from).append("'");
                 if (to != null)
-                    sql.append(" AND date_created <= #").append(to).append("#");
-                sql.append(" ORDER BY date_created DESC");
+                    sql.append(" AND DATE(p.date_created) <= '").append(to).append("'");
+                sql.append(" ORDER BY p.date_created DESC");
 
                 ResultSet rs = conn.prepareStatement(sql.toString()).executeQuery();
                 while (rs.next()) {
-                    String resident = rs.getString("resident_name");
+                    String resident = rs.getString("full_name");
                     String ref      = rs.getString("ref_number");
                     String cat      = rs.getString("payment_type");
                     String amt      = String.format("₱%,.2f", rs.getDouble("amount"));
                     String stat     = rs.getString("status");
                     String rawDate  = rs.getString("date_created");
-                    String id       = rs.getString("payment_id");
+                    String id       = rs.getString("id");
                     String method   = (ref != null && ref.toUpperCase().startsWith("CASH"))
                                         ? "Cash" : "GCash";
                     String date = rawDate;
@@ -1272,14 +1405,14 @@ public class FinancesController {
 
             if (type.equals("All") || type.equals("Expense")) {
                 StringBuilder sql = new StringBuilder(
-                    "SELECT finance_id, description, category, amount, " +
+                    "SELECT id, description, category, amount, " +
                     "status, date_recorded FROM finances WHERE type = 'Expense'");
                 if (!status.equals("All"))
                     sql.append(" AND status = '").append(status).append("'");
                 if (from != null)
-                    sql.append(" AND date_recorded >= #").append(from).append("#");
+                    sql.append(" AND DATE(date_recorded) >= '").append(from).append("'");
                 if (to != null)
-                    sql.append(" AND date_recorded <= #").append(to).append("#");
+                    sql.append(" AND DATE(date_recorded) <= '").append(to).append("'");
                 sql.append(" ORDER BY date_recorded DESC");
 
                 ResultSet rs = conn.prepareStatement(sql.toString()).executeQuery();
@@ -1289,7 +1422,7 @@ public class FinancesController {
                     String amt     = String.format("₱%,.2f", rs.getDouble("amount"));
                     String stat    = rs.getString("status");
                     String rawDate = rs.getString("date_recorded");
-                    String id      = String.valueOf(rs.getInt("finance_id"));
+                    String id      = String.valueOf(rs.getInt("id"));
                     String date = rawDate;
                     try {
                         date = LocalDate.parse(rawDate.substring(0, 10)).format(displayFmt);
@@ -1550,19 +1683,18 @@ public class FinancesController {
                 Connection conn = DatabaseConnection.getConnection();
                 if (finalId == null) {
                     PreparedStatement stmt = conn.prepareStatement(
-                        "INSERT INTO finances " +
-                        "(description, category, type, amount, status, date_recorded, recorded_by) " +
-                        "VALUES (?, ?, 'Expense', ?, ?, Date(), 'Admin')");
+                        "INSERT INTO finances (description, category, type, amount, status, date_recorded, recorded_by) " +
+                        "VALUES (?, ?, 'Expense', ?, ?, NOW(), (SELECT id FROM users WHERE email = ?))");
                     stmt.setString(1, desc);
                     stmt.setString(2, cat);
                     stmt.setDouble(3, parsedAmt);
                     stmt.setString(4, stat);
+                    stmt.setString(5, SessionManager.getEmail());
                     stmt.executeUpdate();
                     stmt.close();
                 } else {
                     PreparedStatement stmt = conn.prepareStatement(
-                        "UPDATE finances SET description=?, category=?, amount=?, status=? " +
-                        "WHERE finance_id=?");
+                        "UPDATE finances SET description=?, category=?, amount=?, status=? WHERE id=?");
                     stmt.setString(1, desc);
                     stmt.setString(2, cat);
                     stmt.setDouble(3, parsedAmt);
@@ -1648,7 +1780,7 @@ public class FinancesController {
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                    "UPDATE payments SET status = ? WHERE payment_id = ?");
+                    "UPDATE payments SET status = ? WHERE id = ?");
                 stmt.setString(1, newStatus);
                 stmt.setString(2, paymentId);
                 stmt.executeUpdate();
@@ -1685,7 +1817,7 @@ public class FinancesController {
                 try {
                     Connection conn = DatabaseConnection.getConnection();
                     PreparedStatement stmt = conn.prepareStatement(
-                        "DELETE FROM finances WHERE finance_id = ?");
+                        "DELETE FROM finances WHERE id = ?");
                     stmt.setInt(1, Integer.parseInt(financeId));
                     stmt.executeUpdate();
                     stmt.close();

@@ -39,7 +39,7 @@ public class PaymentArchiveController {
     public void initialize() {
         loadTopBar();
         loadAvatarPicture();
-        filterType.getItems().addAll("All", "Clearance", "Residency", "Indigency");
+        filterType.getItems().addAll("All", "Residency Certificate", "Barangay Clearance", "Indigency Certificate");
         filterType.setValue("All");
         loadArchive("", "All");
         syncNotifications();
@@ -76,40 +76,57 @@ public class PaymentArchiveController {
         archiveTableBody.getChildren().clear();
         try {
             Connection conn = DatabaseConnection.getConnection();
-            ResultSet rs = conn.prepareStatement(
-                "SELECT * FROM payments WHERE archived = True ORDER BY ID DESC"
-            ).executeQuery();
+
+            // FIXED: JOIN with residents table via FK, use archived = 1
+            String query =
+                "SELECT p.payment_id, p.ref_number, p.resident_id, p.payment_type, " +
+                "       p.amount, p.date_created, p.status, r.full_name " +
+                "FROM payments p " +
+                "LEFT JOIN residents r ON p.resident_id = r.id " +
+                "WHERE p.archived = 1 " +
+                "ORDER BY p.id DESC";
+
+            PreparedStatement stmt = conn.prepareStatement(query);
+            ResultSet rs = stmt.executeQuery();
             boolean hasData = false;
 
             while (rs.next()) {
+                String paymentId    = rs.getString("payment_id");
                 String refNumber    = rs.getString("ref_number");
-                String residentName = rs.getString("resident_name");
+                String residentName = rs.getString("full_name");
                 String paymentType  = rs.getString("payment_type");
                 double amount       = rs.getDouble("amount");
                 String dateCreated  = rs.getString("date_created");
                 String payStatus    = rs.getString("status");
 
+                // Apply search filter
                 if (!search.isEmpty()) {
-                    if (!residentName.toLowerCase().contains(search.toLowerCase()) &&
-                        !refNumber.toLowerCase().contains(search.toLowerCase())) continue;
+                    boolean nameMatch = residentName != null &&
+                        residentName.toLowerCase().contains(search.toLowerCase());
+                    boolean refMatch = refNumber != null &&
+                        refNumber.toLowerCase().contains(search.toLowerCase());
+                    if (!nameMatch && !refMatch) continue;
                 }
+
+                // Apply type filter
                 if (!type.equals("All") && !paymentType.equals(type)) continue;
 
                 hasData = true;
+
                 HBox row = new HBox();
                 row.setStyle("-fx-padding: 14 0; -fx-border-color: #f8f8f8;" +
                     "-fx-border-width: 0 0 1 0;");
 
-                Label refLabel = new Label(refNumber);
+                Label refLabel = new Label(refNumber != null ? refNumber : "—");
                 refLabel.setPrefWidth(120);
                 refLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
-                Label nameLabel = new Label(residentName);
+                Label nameLabel = new Label(residentName != null ? residentName : "—");
                 nameLabel.setPrefWidth(200);
                 nameLabel.setStyle(
                     "-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #333333;");
 
-                Label typeLabel = new Label(paymentType);
+                Label typeLabel = new Label(paymentType != null ? paymentType : "—");
                 typeLabel.setPrefWidth(180);
                 typeLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
@@ -122,7 +139,7 @@ public class PaymentArchiveController {
                 dateLabel.setPrefWidth(140);
                 dateLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
 
-                Label statusLabel = new Label(payStatus);
+                Label statusLabel = new Label(payStatus != null ? payStatus : "Pending");
                 statusLabel.setStyle(
                     "-fx-background-color: #e8f5e9; -fx-text-fill: #4caf50;" +
                     "-fx-font-size: 11px; -fx-font-weight: bold;" +
@@ -143,7 +160,9 @@ public class PaymentArchiveController {
                 VBox.setMargin(empty, new Insets(20, 0, 20, 0));
                 archiveTableBody.getChildren().add(empty);
             }
-            rs.close(); conn.close();
+            rs.close();
+            stmt.close();
+            conn.close();
         } catch (Exception e) {
             e.printStackTrace();
             Label error = new Label("Error loading archive: " + e.getMessage());
@@ -159,22 +178,25 @@ public class PaymentArchiveController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
+            
             PreparedStatement s1 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'announcement' " +
                 "AND user_email = ? AND reference_id NOT IN " +
                 "(SELECT announcement_id FROM announcements)");
             s1.setString(1, email); s1.executeUpdate(); s1.close();
+            
             PreparedStatement s2 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'complaint' " +
                 "AND user_email = ? AND reference_id NOT IN " +
                 "(SELECT complaint_id FROM complaints WHERE status <> 'Resolved')");
             s2.setString(1, email); s2.executeUpdate(); s2.close();
+            
             PreparedStatement s3 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'payment' " +
                 "AND user_email = ? AND reference_id NOT IN " +
-                "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
+                "(SELECT ref_number FROM payments WHERE status = 'Pending' AND archived = 0)");
             s3.setString(1, email); s3.executeUpdate(); s3.close();
+            
             conn.close();
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -186,17 +208,16 @@ public class PaymentArchiveController {
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
+            
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+                "SELECT ref_number FROM payments WHERE status = 'Pending' AND archived = 0"
             ).executeQuery();
             while (rs1.next()) {
                 String refNo = rs1.getString("ref_number");
-                insertIfNew(conn, "payment",
-                    "Pending payment from " + rs1.getString("resident_name") +
-                    " (" + refNo + ")", refNo, email);
+                insertIfNew(conn, "payment", "Pending payment " + refNo, refNo, email);
             }
             rs1.close();
+
             ResultSet rs2 = conn.prepareStatement(
                 "SELECT complaint_id, complainant_name, incident_type " +
                 "FROM complaints WHERE status <> 'Resolved'"
@@ -208,6 +229,7 @@ public class PaymentArchiveController {
                     " by " + rs2.getString("complainant_name"), cid, email);
             }
             rs2.close();
+            
             ResultSet rs3 = conn.prepareStatement(
                 "SELECT announcement_id, title FROM announcements ORDER BY id DESC"
             ).executeQuery();
@@ -252,7 +274,8 @@ public class PaymentArchiveController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = 'true' WHERE notif_id = ?");
+            stmt.setString(1, notifId);
             stmt.executeUpdate(); stmt.close(); conn.close();
         } catch (Exception e) { e.printStackTrace(); }
     }
@@ -264,8 +287,7 @@ public class PaymentArchiveController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
+                "SELECT COUNT(*) FROM notifications WHERE user_email = ? AND is_read = 'false'");
             stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
@@ -345,11 +367,11 @@ public class PaymentArchiveController {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT * FROM notifications WHERE user_email = ? ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_email = ? AND is_read = 'false' ORDER BY notif_id DESC";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, email);
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
@@ -358,7 +380,7 @@ public class PaymentArchiveController {
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
                     empty.setStyle("-fx-alignment: CENTER; -fx-padding: 40;");

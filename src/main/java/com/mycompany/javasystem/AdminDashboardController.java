@@ -115,36 +115,52 @@ public class AdminDashboardController {
         greetingLabel.setText(greeting);
     }
 
+    // ── Get Current User ID ───────────────────────────────────────────────────────
+    private int getCurrentUserId() {
+        String email = SessionManager.getEmail();
+        if (email == null) return -1;
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(
+                "SELECT id FROM users WHERE email = ?");
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            int userId = rs.next() ? rs.getInt("id") : -1;
+            rs.close(); stmt.close(); conn.close();
+            return userId;
+        } catch (Exception e) { e.printStackTrace(); return -1; }
+    }
+
     // ── Notifications ─────────────────────────────────────────────────────────────
     private void cleanupNotifications() {
-        String email = SessionManager.getEmail();
-        if (email == null) return;
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
 
             PreparedStatement stmt1 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'announcement' " +
-                "AND user_email = ? AND reference_id NOT IN " +
+                "AND user_id = ? AND reference_id NOT IN " +
                 "(SELECT announcement_id FROM announcements)");
-            stmt1.setString(1, email);
+            stmt1.setInt(1, userId);
             int d1 = stmt1.executeUpdate();
             stmt1.close();
 
             PreparedStatement stmt2 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'complaint' " +
-                "AND user_email = ? AND reference_id NOT IN " +
+                "AND user_id = ? AND reference_id NOT IN " +
                 "(SELECT complaint_id FROM complaints WHERE status <> 'Resolved')");
-            stmt2.setString(1, email);
+            stmt2.setInt(1, userId);
             int d2 = stmt2.executeUpdate();
             stmt2.close();
 
             PreparedStatement stmt3 = conn.prepareStatement(
                 "DELETE FROM notifications WHERE type = 'payment' " +
-                "AND user_email = ? AND reference_id NOT IN " +
+                "AND user_id = ? AND reference_id NOT IN " +
                 "(SELECT ref_number FROM payments " +
-                "WHERE status = 'Pending' AND archived = False)");
-            stmt3.setString(1, email);
+                "WHERE status = 'Pending' AND archived = 0)");
+            stmt3.setInt(1, userId);
             int d3 = stmt3.executeUpdate();
             stmt3.close();
 
@@ -155,21 +171,22 @@ public class AdminDashboardController {
 
     private void syncNotifications() {
         cleanupNotifications();
-        String email = SessionManager.getEmail();
-        if (email == null) return;
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
 
             ResultSet rs1 = conn.prepareStatement(
-                "SELECT ref_number, resident_name FROM payments " +
-                "WHERE status = 'Pending' AND archived = False"
+                "SELECT p.ref_number, r.full_name FROM payments p " +
+                "JOIN residents r ON p.resident_id = r.id " +
+                "WHERE p.status = 'Pending' AND p.archived = 0"
             ).executeQuery();
             while (rs1.next()) {
                 String refNo = rs1.getString("ref_number");
                 String msg = "Pending payment from " +
-                    rs1.getString("resident_name") + " (" + refNo + ")";
-                insertIfNew(conn, "payment", msg, refNo, email);
+                    rs1.getString("full_name") + " (" + refNo + ")";
+                insertIfNew(conn, "payment", msg, refNo, userId);
             }
             rs1.close();
 
@@ -181,7 +198,7 @@ public class AdminDashboardController {
                 String cid = rs2.getString("complaint_id");
                 String msg = "Open complaint: " + rs2.getString("incident_type") +
                     " by " + rs2.getString("complainant_name");
-                insertIfNew(conn, "complaint", msg, cid, email);
+                insertIfNew(conn, "complaint", msg, cid, userId);
             }
             rs2.close();
 
@@ -192,7 +209,7 @@ public class AdminDashboardController {
             while (rs3.next() && aCount < 5) {
                 String aid = rs3.getString("announcement_id");
                 String msg = "Announcement posted: " + rs3.getString("title");
-                insertIfNew(conn, "announcement", msg, aid, email);
+                insertIfNew(conn, "announcement", msg, aid, userId);
                 aCount++;
             }
             rs3.close();
@@ -202,12 +219,12 @@ public class AdminDashboardController {
 
     private void insertIfNew(Connection conn, String type,
                               String message, String refId,
-                              String email) throws Exception {
+                              int userId) throws Exception {
         PreparedStatement check = conn.prepareStatement(
             "SELECT notif_id FROM notifications " +
-            "WHERE reference_id = ? AND user_email = ? AND type = ?");
+            "WHERE reference_id = ? AND user_id = ? AND type = ?");
         check.setString(1, refId);
-        check.setString(2, email);
+        check.setInt(2, userId);
         check.setString(3, type);
         ResultSet rs = check.executeQuery();
         boolean exists = rs.next();
@@ -216,14 +233,15 @@ public class AdminDashboardController {
         if (!exists) {
             PreparedStatement ins = conn.prepareStatement(
                 "INSERT INTO notifications " +
-                "(type, message, reference_id, is_read, created_at, user_email) " +
-                "VALUES (?, ?, ?, 'false', ?, ?)");
+                "(type, message, reference_id, is_read, created_at, user_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?)");
             ins.setString(1, type);
             ins.setString(2, message);
             ins.setString(3, refId);
-            ins.setString(4, LocalDateTime.now()
+            ins.setString(4, "No");
+            ins.setString(5, LocalDateTime.now()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            ins.setString(5, email);
+            ins.setInt(6, userId);
             ins.executeUpdate();
             ins.close();
             System.out.println("[Notif] New: " + type + " - " + refId);
@@ -235,8 +253,9 @@ public class AdminDashboardController {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
-                "UPDATE notifications SET is_read = 'true' " +
-                "WHERE notif_id = " + notifId);
+                "UPDATE notifications SET is_read = ? WHERE notif_id = ?");
+            stmt.setString(1, "Yes");
+            stmt.setInt(2, Integer.parseInt(notifId));
             int updated = stmt.executeUpdate();
             System.out.println("[Read] notif_id=" + notifId + " updated=" + updated);
             stmt.close();
@@ -245,15 +264,16 @@ public class AdminDashboardController {
     }
 
     private void refreshAlertBadge() {
-        String email = SessionManager.getEmail();
-        if (email == null) return;
+        int userId = getCurrentUserId();
+        if (userId == -1) return;
         try {
             Connection conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(true);
             PreparedStatement stmt = conn.prepareStatement(
                 "SELECT COUNT(*) FROM notifications " +
-                "WHERE user_email = ? AND is_read = 'false'");
-            stmt.setString(1, email);
+                "WHERE user_id = ? AND is_read = ?");
+            stmt.setInt(1, userId);
+            stmt.setString(2, "No");
             ResultSet rs = stmt.executeQuery();
             int count = rs.next() ? rs.getInt(1) : 0;
             rs.close(); stmt.close(); conn.close();
@@ -325,20 +345,21 @@ public class AdminDashboardController {
         notifBody.setStyle("-fx-background-color: #ffffff;");
 
         Runnable[] loadNotifsRef = {null};
+        int userId = getCurrentUserId();
 
         Runnable loadNotifs = () -> {
             notifBody.getChildren().clear();
-            String email = SessionManager.getEmail();
-            if (email == null) return;
+            if (userId == -1) return;
             try {
                 Connection conn = DatabaseConnection.getConnection();
                 conn.setAutoCommit(true);
                 String sql = showingPast[0]
-                    ? "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' ORDER BY notif_id DESC"
-                    : "SELECT * FROM notifications WHERE user_email = '" + email +
-                      "' AND is_read = 'false' ORDER BY notif_id DESC";
-                ResultSet rs = conn.prepareStatement(sql).executeQuery();
+                    ? "SELECT * FROM notifications WHERE user_id = ? ORDER BY notif_id DESC"
+                    : "SELECT * FROM notifications WHERE user_id = ? AND is_read = ? ORDER BY notif_id DESC";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setInt(1, userId);
+                if (!showingPast[0]) stmt.setString(2, "No");
+                ResultSet rs = stmt.executeQuery();
                 List<String[]> items = new ArrayList<>();
                 while (rs.next()) {
                     items.add(new String[]{
@@ -349,7 +370,7 @@ public class AdminDashboardController {
                         rs.getString("created_at")
                     });
                 }
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
 
                 if (items.isEmpty()) {
                     VBox empty = new VBox(8);
@@ -445,7 +466,7 @@ public class AdminDashboardController {
         row.setStyle(
             "-fx-padding: 16 24;" +
             "-fx-border-color: #f4f4f4; -fx-border-width: 0 0 1 0;" +
-            ("false".equals(isRead)
+            ("No".equals(isRead)
                 ? "-fx-background-color: #fafbff; -fx-cursor: hand;"
                 : "-fx-background-color: #ffffff; -fx-cursor: hand;"));
         row.setAlignment(Pos.CENTER_LEFT);
@@ -464,13 +485,13 @@ public class AdminDashboardController {
         Label msgLbl = new Label(message);
         msgLbl.setStyle(
             "-fx-font-size: 12px; -fx-text-fill: #1a1a1a;" +
-            ("false".equals(isRead) ? " -fx-font-weight: bold;" : ""));
+            ("No".equals(isRead) ? " -fx-font-weight: bold;" : ""));
         msgLbl.setWrapText(true);
         Label dateLbl = new Label(dateStr != null ? dateStr : "");
         dateLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: #aaaaaa;");
         textBox.getChildren().addAll(msgLbl, dateLbl);
 
-        if ("false".equals(isRead)) {
+        if ("No".equals(isRead)) {
             Circle dot = new Circle(4);
             dot.setStyle("-fx-fill: #1565c0;");
             row.getChildren().addAll(iconBox, textBox, dot);
@@ -554,7 +575,7 @@ public class AdminDashboardController {
             "-fx-border-width: 1; -fx-padding: 11 20; -fx-cursor: hand;" +
             "-fx-alignment: CENTER_LEFT;");
         goToBtn.setOnAction(e -> {
-            if ("false".equals(isRead)) markOneAsRead(notifId);
+            if ("No".equals(isRead)) markOneAsRead(notifId);
             detail.close();
             alertStage.close();
             Stage stage = (Stage) logoutButton.getScene().getWindow();
@@ -581,7 +602,7 @@ public class AdminDashboardController {
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
             "-fx-background-radius: 8; -fx-padding: 10 24; -fx-cursor: hand;");
 
-        if ("true".equals(isRead)) {
+        if ("Yes".equals(isRead)) {
             footer.getChildren().add(cancelBtn);
         } else {
             markBtn.setOnAction(e -> {
@@ -611,20 +632,21 @@ public class AdminDashboardController {
         int actualResidents = getCount("SELECT COUNT(*) FROM residents");
         int basePop = BASE_POPULATION;
         try {
-            String email = SessionManager.getEmail();
-            if (email != null) {
+            int userId = getCurrentUserId();
+            if (userId != -1) {
                 Connection conn = DatabaseConnection.getConnection();
-                ResultSet rs = conn.prepareStatement(
-                    "SELECT base_population FROM settings WHERE user_email = '" + email + "'"
-                ).executeQuery();
+                PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT base_population FROM settings WHERE user_id = ?");
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
                 if (rs.next() && rs.getInt("base_population") > 0)
                     basePop = rs.getInt("base_population");
-                rs.close(); conn.close();
+                rs.close(); stmt.close(); conn.close();
             }
         } catch (Exception e) { e.printStackTrace(); }
         totalResidentsLabel.setText(String.format("%,d", basePop + actualResidents));
         int pending = getCount(
-            "SELECT COUNT(*) FROM payments WHERE status = 'Pending' AND archived = False");
+            "SELECT COUNT(*) FROM payments WHERE status = 'Pending' AND archived = 0");
         pendingRequestsLabel.setText(String.valueOf(pending));
         double todayTotal = 0;
         try {
@@ -656,57 +678,108 @@ public class AdminDashboardController {
         totalExpensesLabel.setText(String.valueOf(expenses));
     }
 
-    // ── Recent Requests ───────────────────────────────────────────────────────────
-    private void loadRecentRequests() {
-        recentRequestsBody.getChildren().clear();
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            ResultSet rs = conn.prepareStatement(
-                "SELECT resident_name, payment_type, status, date_created " +
-                "FROM payments ORDER BY ID DESC"
-            ).executeQuery();
-            int count = 0;
-            while (rs.next() && count < 5) {
-                String name   = rs.getString("resident_name");
-                String type   = rs.getString("payment_type");
-                String status = rs.getString("status");
-                String date   = rs.getString("date_created");
-                if (date != null && date.length() > 10) date = date.substring(0, 10);
-                HBox row = new HBox();
-                row.setStyle("-fx-padding: 12 0;" +
-                    "-fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;");
-                Label nameLbl = new Label(name != null ? name : "—");
-                nameLbl.setPrefWidth(155);
-                nameLbl.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;");
-                Label typeLbl = new Label(type != null ? type : "—");
-                typeLbl.setPrefWidth(110);
-                typeLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
-                String bg, fg;
-                if ("Paid".equals(status)) { bg = "#e8f5e9"; fg = "#2e7d32"; }
-                else                       { bg = "#fff8e1"; fg = "#f59e0b"; }
-                Label statusLbl = new Label(status != null ? status : "—");
-                statusLbl.setPrefWidth(100);
-                statusLbl.setStyle(
-                    "-fx-background-color: " + bg + "; -fx-text-fill: " + fg + ";" +
-                    "-fx-font-size: 10px; -fx-font-weight: bold;" +
-                    "-fx-background-radius: 20; -fx-padding: 3 10;");
-                Label dateLbl = new Label(date != null ? date : "—");
-                dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
-                row.getChildren().addAll(nameLbl, typeLbl, statusLbl, dateLbl);
-                recentRequestsBody.getChildren().add(row);
-                count++;
-            }
-            rs.close(); conn.close();
-            if (count == 0) {
-                Label empty = new Label("No recent requests found.");
-                empty.setStyle(
-                    "-fx-font-size: 12px; -fx-text-fill: #aaaaaa; -fx-padding: 16 0;");
-                recentRequestsBody.getChildren().add(empty);
-            }
-        } catch (Exception e) { e.printStackTrace(); }
+  // ── Recent Requests ───────────────────────────────────────────────────────────
+private void loadRecentRequests() {
+    recentRequestsBody.getChildren().clear();
+    try {
+        Connection conn = DatabaseConnection.getConnection();
+        
+        int count = 0;
+        
+        // Get all document requests (no JOIN needed, no resident_id dependency)
+        PreparedStatement stmt = conn.prepareStatement(
+            "SELECT request_id, document_type, status, date_requested FROM document_requests " +
+            "WHERE status = 'Pending' " +
+            "ORDER BY id DESC LIMIT 5");
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) {
+            String docId = rs.getString("request_id");
+            String type  = rs.getString("document_type");
+            String status = rs.getString("status");
+            String date = rs.getString("date_requested");
+            if (date != null && date.length() > 10) date = date.substring(0, 10);
+            
+            // Convert document type to short display name
+            String displayType = formatDocumentType(type);
+            
+            HBox row = new HBox(12);
+            row.setStyle("-fx-padding: 12 0;" +
+                "-fx-border-color: #f8f8f8; -fx-border-width: 0 0 1 0;" +
+                "-fx-alignment: CENTER_LEFT;");
+            
+            Label nameLbl = new Label(docId != null ? docId : "—");
+            nameLbl.setPrefWidth(155);
+            nameLbl.setStyle(
+                "-fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;");
+            
+            Label typeLbl = new Label(displayType);
+            typeLbl.setPrefWidth(110);
+            typeLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #666666;");
+            
+            // Status badge - MUTED YELLOW like Document Requests page
+            String bg = "#fff9c4";
+            String fg = "#f57f17";
+            Label statusLbl = new Label(status != null ? capitalize(status) : "—");
+            statusLbl.setPrefWidth(100);
+            statusLbl.setStyle(
+                "-fx-background-color: " + bg + "; -fx-text-fill: " + fg + ";" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 4; -fx-padding: 4 10;");
+            
+            Label dateLbl = new Label(date != null ? date : "—");
+            dateLbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #aaaaaa;");
+            // View button - LIGHT BACKGROUND
+            Button viewBtn = new Button("View");
+            viewBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 4; -fx-padding: 5 12; -fx-cursor: hand;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;");
+            viewBtn.setOnMouseEntered(e -> viewBtn.setStyle(
+                "-fx-background-color: #e8e8e8; -fx-text-fill: #333333;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 4; -fx-padding: 5 12; -fx-cursor: hand;" +
+                "-fx-border-color: #d0d0d0; -fx-border-width: 1;"));
+            viewBtn.setOnMouseExited(e -> viewBtn.setStyle(
+                "-fx-background-color: #f4f4f4; -fx-text-fill: #555555;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 4; -fx-padding: 5 12; -fx-cursor: hand;" +
+                "-fx-border-color: #e0e0e0; -fx-border-width: 1;"));
+            viewBtn.setOnAction(e -> {
+                Stage stage = (Stage) logoutButton.getScene().getWindow();
+                SceneTransition.slideTo(stage, "Documents.fxml", true, getClass());
+            });
+            
+            row.getChildren().addAll(nameLbl, typeLbl, statusLbl, dateLbl, viewBtn);
+            recentRequestsBody.getChildren().add(row);
+            count++;
+        }
+        rs.close(); stmt.close();
+        conn.close();
+        
+        if (count == 0) {
+            Label empty = new Label("No recent requests found.");
+            empty.setStyle(
+                "-fx-font-size: 12px; -fx-text-fill: #aaaaaa; -fx-padding: 16 0;");
+            recentRequestsBody.getChildren().add(empty);
+        }
+    } catch (Exception e) { 
+        e.printStackTrace();
+        Label error = new Label("Error: " + e.getMessage());
+        error.setStyle("-fx-font-size: 11px; -fx-text-fill: #c62828;");
+        recentRequestsBody.getChildren().add(error);
     }
-
+}
+// ── Helper method to format document type ────────────────────────────────────
+private String formatDocumentType(String type) {
+    if (type == null) return "—";
+    
+    if (type.toLowerCase().contains("barangay")) return "CLEARANCE";
+    if (type.toLowerCase().contains("residency")) return "RESIDENCY";
+    if (type.toLowerCase().contains("indigency")) return "INDIGENCY";
+    
+    return type.toUpperCase();
+}
     // ── Announcements ─────────────────────────────────────────────────────────────
     private void loadAnnouncements() {
         announcementsBody.getChildren().clear();
@@ -833,7 +906,7 @@ public class AdminDashboardController {
         }
     }
 
-    // ── Navigation ────────────────────────────────────────────────────────────────
+    // ── Navigation ───────────────────────────────────────────────��────────────────
     @FXML private void handleLogout() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
         SceneTransition.slideTo(stage, "login.fxml", false, getClass());

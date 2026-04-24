@@ -308,7 +308,9 @@
             <VBox style="-fx-background-color: #ffffff;
                          -fx-background-radius: 10;
                          -fx-border-color: #eeeeee;
-                         -fx-border-width: 1;">
+                         -fx-border-width: 1;
+                         -fx-padding: 0;"
+                  VBox.vgrow="ALWAYS">
                 <HBox style="-fx-padding: 14 16;
                              -fx-border-color: #f0f0f0;
                              -fx-border-width: 0 0 1 0;
@@ -327,12 +329,21 @@
                     <Label text="ACTION" prefWidth="200"
                            style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #aaaaaa;"/>
                 </HBox>
-                <VBox fx:id="documentsTableBody" style="-fx-padding: 0;">
-                    <Label text="No document requests found."
-                           style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;">
-                        <VBox.margin><Insets top="20" bottom="20"/></VBox.margin>
-                    </Label>
-                </VBox>
+                <ScrollPane fx:id="mainScrollPane"
+                           VBox.vgrow="ALWAYS"
+                           fitToWidth="true"
+                           hbarPolicy="NEVER"
+                           vbarPolicy="AS_NEEDED"
+                           style="-fx-background-color: transparent;
+                                  -fx-background: transparent;
+                                  -fx-border-color: transparent;">
+                    <VBox fx:id="documentsTableBody" style="-fx-padding: 0;">
+                        <Label text="No document requests found."
+                               style="-fx-font-size: 13px; -fx-text-fill: #aaaaaa; -fx-padding: 20 0;">
+                            <VBox.margin><Insets top="20" bottom="20"/></VBox.margin>
+                        </Label>
+                    </VBox>
+                </ScrollPane>
             </VBox>
         </VBox>
     </center>
