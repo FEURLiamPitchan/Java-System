@@ -150,6 +150,11 @@ public void initialize() {
         if (s == null || s.isEmpty()) return s;
         return s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
     }
+    @FXML
+    private void handleAvatarClick() {
+        Stage stage = (Stage) logoutButton.getScene().getWindow();
+        SceneTransition.slideTo(stage, "Profile.fxml", true, getClass());
+    }
 // =========================================================================
 //  NOTIFICATIONS
 // =========================================================================
