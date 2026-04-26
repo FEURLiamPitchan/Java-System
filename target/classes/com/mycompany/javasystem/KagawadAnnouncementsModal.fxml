@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.mycompany.javasystem.AnnouncementsModalController"
+      spacing="20" prefWidth="620"
+      style="-fx-background-color: #f8f8f8;">
+
+    <!-- Header Bar -->
+    <VBox style="-fx-background-color: #2d2d2d; -fx-padding: 24 28;">
+        <Label fx:id="modalTitle" text="New Announcement"
+               style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #ffffff;"/>
+        <Label text="Fill in the details below to post an announcement"
+               style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
+    </VBox>
+
+    <!-- Form Body -->
+    <VBox spacing="18" style="-fx-padding: 0 28 8 28;">
+
+        <!-- Title -->
+        <VBox spacing="6">
+            <Label text="TITLE"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999; -fx-padding: 0 0 0 2;"/>
+            <TextField fx:id="titleField" promptText="Enter announcement title"
+                       style="-fx-background-color: #ffffff;
+                              -fx-border-color: #e0e0e0;
+                              -fx-border-width: 1; -fx-border-radius: 8;
+                              -fx-background-radius: 8;
+                              -fx-padding: 12 14; -fx-font-size: 13px;
+                              -fx-text-fill: #1a1a1a;"/>
+        </VBox>
+
+        <!-- Content -->
+        <VBox spacing="6">
+            <Label text="CONTENT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999; -fx-padding: 0 0 0 2;"/>
+            <TextArea fx:id="contentField" promptText="Enter announcement content..."
+                      prefHeight="140" wrapText="true"
+                      style="-fx-background-color: #ffffff;
+                             -fx-border-color: #e0e0e0;
+                             -fx-border-width: 1; -fx-border-radius: 8;
+                             -fx-background-radius: 8;
+                             -fx-padding: 12 14; -fx-font-size: 13px;"/>
+        </VBox>
+
+        <!-- Priority and Category -->
+        <HBox spacing="16">
+            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                <Label text="PRIORITY"
+                       style="-fx-font-size: 10px; -fx-font-weight: bold;
+                              -fx-text-fill: #999999; -fx-padding: 0 0 0 2;"/>
+                <ComboBox fx:id="priorityField" maxWidth="Infinity"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-border-color: #e0e0e0;
+                                 -fx-border-width: 1; -fx-border-radius: 8;
+                                 -fx-background-radius: 8; -fx-font-size: 13px;
+                                 -fx-padding: 4;"/>
+            </VBox>
+            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                <Label text="CATEGORY"
+                       style="-fx-font-size: 10px; -fx-font-weight: bold;
+                              -fx-text-fill: #999999; -fx-padding: 0 0 0 2;"/>
+                <ComboBox fx:id="categoryField" maxWidth="Infinity"
+                          style="-fx-background-color: #ffffff;
+                                 -fx-border-color: #e0e0e0;
+                                 -fx-border-width: 1; -fx-border-radius: 8;
+                                 -fx-background-radius: 8; -fx-font-size: 13px;
+                                 -fx-padding: 4;"/>
+            </VBox>
+        </HBox>
+
+        <!-- Posted By -->
+        <VBox spacing="6">
+            <Label text="POSTED BY"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999; -fx-padding: 0 0 0 2;"/>
+            <TextField fx:id="postedByField" promptText="Your name or role"
+                       style="-fx-background-color: #ffffff;
+                              -fx-border-color: #e0e0e0;
+                              -fx-border-width: 1; -fx-border-radius: 8;
+                              -fx-background-radius: 8;
+                              -fx-padding: 12 14; -fx-font-size: 13px;"/>
+        </VBox>
+
+        <!-- Preview Length -->
+        <VBox spacing="8">
+            <Label text="PREVIEW LENGTH"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #999999; -fx-padding: 0 0 0 2;"/>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <TextField fx:id="previewLengthField" promptText="e.g. 180"
+                           prefWidth="110"
+                           style="-fx-background-color: #ffffff;
+                                  -fx-border-color: #e0e0e0;
+                                  -fx-border-width: 1; -fx-border-radius: 8;
+                                  -fx-background-radius: 8;
+                                  -fx-padding: 12 14; -fx-font-size: 13px;"/>
+                <Label text="characters"
+                       style="-fx-font-size: 12px; -fx-text-fill: #aaaaaa;"/>
+                <CheckBox fx:id="autoCheckBox" text="Auto (smart default)"
+                          style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+            </HBox>
+
+            <!-- Live Preview Box -->
+            <VBox spacing="6"
+                  style="-fx-background-color: #ffffff;
+                         -fx-border-color: #e0e0e0;
+                         -fx-border-width: 1;
+                         -fx-border-radius: 8;
+                         -fx-background-radius: 8;
+                         -fx-padding: 14;">
+                <HBox alignment="CENTER_LEFT" spacing="6">
+                    <Label text="●"
+                           style="-fx-font-size: 8px; -fx-text-fill: #2d2d2d;"/>
+                    <Label text="LIVE PREVIEW"
+                           style="-fx-font-size: 10px; -fx-font-weight: bold;
+                                  -fx-text-fill: #999999;"/>
+                </HBox>
+                <Label fx:id="previewLabel"
+                       text="Start typing content to see preview..."
+                       wrapText="true"
+                       style="-fx-font-size: 13px; -fx-text-fill: #555555;"/>
+            </VBox>
+        </VBox>
+
+    </VBox>
+
+    <!-- Footer Buttons -->
+    <HBox spacing="12" alignment="CENTER_RIGHT"
+          style="-fx-padding: 16 28 24 28;
+                 -fx-border-color: #eeeeee;
+                 -fx-border-width: 1 0 0 0;
+                 -fx-background-color: #ffffff;">
+        <Button text="Cancel" onAction="#handleCancel"
+                style="-fx-background-color: #ffffff;
+                       -fx-text-fill: #555555;
+                       -fx-font-size: 13px;
+                       -fx-background-radius: 8;
+                       -fx-border-radius: 8;
+                       -fx-border-color: #e0e0e0;
+                       -fx-border-width: 1;
+                       -fx-padding: 11 24;
+                       -fx-cursor: hand;"/>
+        <Button fx:id="submitButton" text="Post Announcement"
+                onAction="#handleSubmit"
+                style="-fx-background-color: #2d2d2d;
+                       -fx-text-fill: #ffffff;
+                       -fx-font-size: 13px;
+                       -fx-background-radius: 8;
+                       -fx-padding: 11 24;
+                       -fx-cursor: hand;"/>
+    </HBox>
+
+</VBox>
