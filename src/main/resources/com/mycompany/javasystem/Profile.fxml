@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.image.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.mycompany.javasystem.ProfileController"
+            prefHeight="700.0" prefWidth="1100.0"
+            style="-fx-background-color: #f0f2f5;"
+            stylesheets="@style.css">
+
+    <!-- TOP BAR -->
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="65"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 0 1 0;
+                     -fx-padding: 0 24;">
+            <HBox alignment="CENTER_LEFT" spacing="12" HBox.hgrow="ALWAYS">
+                <Circle radius="18" fill="#2d2d2d"/>
+                <VBox alignment="CENTER_LEFT" spacing="2">
+                    <Label text="Barangay San Isidro"
+                           style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                    <Label text="Management System"
+                           style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_RIGHT" spacing="12">
+
+                <!-- Alerts button with badge -->
+                <StackPane>
+                    <Button fx:id="alertsButton" text="🔔  Alerts"
+                            onAction="#handleAlertsClick"
+                            style="-fx-background-color: #f4f4f4;
+                                   -fx-text-fill: #333333;
+                                   -fx-font-size: 12px;
+                                   -fx-background-radius: 20;
+                                   -fx-border-radius: 20;
+                                   -fx-border-color: #e0e0e0;
+                                   -fx-border-width: 1;
+                                   -fx-padding: 8 16;
+                                   -fx-cursor: hand;"/>
+                    <Label fx:id="alertBadge" text="0"
+                           visible="false"
+                           style="-fx-background-color: #e53935;
+                                  -fx-text-fill: #ffffff;
+                                  -fx-font-size: 9px;
+                                  -fx-font-weight: bold;
+                                  -fx-background-radius: 10;
+                                  -fx-padding: 2 5;
+                                  -fx-min-width: 16;
+                                  -fx-min-height: 16;"
+                           StackPane.alignment="TOP_RIGHT"/>
+                </StackPane>
+
+                <!-- Avatar — clickable -->
+                <HBox fx:id="avatarBox" alignment="CENTER" spacing="8"
+                      onMouseClicked="#handleAvatarClick"
+                      style="-fx-background-color: #f4f4f4;
+                             -fx-background-radius: 20; -fx-border-radius: 20;
+                             -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                             -fx-padding: 6 16; -fx-cursor: hand;">
+                    <StackPane>
+                        <Circle radius="14" fill="#2d2d2d" fx:id="avatarCircle"/>
+                        <ImageView fx:id="profileImageView"
+                                   fitWidth="28" fitHeight="28"
+                                   preserveRatio="false" visible="false"/>
+                        <Label fx:id="avatarInitialLabel" text="A"
+                               style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #ffffff;"/>
+                    </StackPane>
+                    <VBox alignment="CENTER_LEFT" spacing="1">
+                        <Label fx:id="topBarNameLabel" text="Administrator"
+                               style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                        <Label fx:id="topBarRoleLabel" text="Admin"
+                               style="-fx-font-size: 10px; -fx-text-fill: #aaaaaa;"/>
+                    </VBox>
+                </HBox>
+
+                <Button fx:id="logoutButton" text="← Logout" onAction="#handleLogout"
+                        style="-fx-background-color: #ffffff; -fx-text-fill: #555555;
+                               -fx-font-size: 12px; -fx-background-radius: 8;
+                               -fx-border-radius: 8; -fx-border-color: #e0e0e0;
+                               -fx-border-width: 1; -fx-padding: 8 16; -fx-cursor: hand;"/>
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- SIDEBAR -->
+    <left>
+        <VBox prefWidth="220" prefHeight="700"
+              style="-fx-background-color: #ffffff;
+                     -fx-border-color: #e8e8e8;
+                     -fx-border-width: 0 1 0 0;
+                     -fx-padding: 20 12;">
+
+            <Label text="MAIN"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+            <Button text="🏠   Dashboard" maxWidth="Infinity"
+                    onAction="#goToDashboard" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+            <Button text="👥   Residents" maxWidth="Infinity"
+                    onAction="#goToResidents" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+            <Button text="📄   Documents" maxWidth="Infinity"
+                    onAction="#goToDocuments" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+            <Button text="💳   Payments" maxWidth="Infinity"
+                    onAction="#goToPayments" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+            <Button text="    📁   Archive" maxWidth="Infinity"
+                    onAction="#goToArchive" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #777777;
+                           -fx-font-size: 12px; -fx-background-radius: 8;
+                           -fx-padding: 9 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="COMMUNITY"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+            <Button text="📢   Complaints" maxWidth="Infinity"
+                    onAction="#goToComplaints" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+            <Button text="📣   Announcements" maxWidth="Infinity"
+                    onAction="#goToAnnouncements" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="16"/></VBox.margin>
+            </Button>
+
+            <Label text="MANAGEMENT"
+                   style="-fx-font-size: 10px; -fx-font-weight: bold;
+                          -fx-text-fill: #bbbbbb; -fx-padding: 8 12 6 12;"/>
+            <Button text="📊   Finance" maxWidth="Infinity"
+                    onAction="#goToFinances" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+            <Button text="⚙️   Admin" maxWidth="Infinity"
+                    onAction="#goToAdmin" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+
+            <Region VBox.vgrow="ALWAYS"/>
+            <Separator style="-fx-opacity: 0.3;">
+                <VBox.margin><Insets bottom="8"/></VBox.margin>
+            </Separator>
+            <Button text="⚙   Settings" maxWidth="Infinity"
+                    onAction="#goToSettings" focusTraversable="false"
+                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
+                           -fx-font-size: 13px; -fx-background-radius: 8;
+                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
+                <VBox.margin><Insets bottom="4"/></VBox.margin>
+            </Button>
+        </VBox>
+    </left>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fx:id="mainScrollPane" fitToWidth="true"
+                    style="-fx-background-color: transparent;
+                           -fx-background: #f0f2f5;
+                           -fx-border-color: transparent;">
+            <VBox spacing="20" style="-fx-padding: 28; -fx-background-color: #f0f2f5;">
+
+                <!-- Page Header -->
+                <HBox alignment="CENTER_LEFT">
+                    <VBox HBox.hgrow="ALWAYS" spacing="4">
+                        <Label text="My Profile"
+                               style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                        <Label text="Manage your personal information and account settings"
+                               style="-fx-font-size: 12px; -fx-text-fill: #999999;"/>
+                    </VBox>
+                </HBox>
+
+                <!-- Two column layout -->
+                <HBox spacing="20" alignment="TOP_LEFT">
+
+                    <!-- Left Panel -->
+                    <VBox spacing="16" prefWidth="260">
+
+                        <!-- Profile Picture Card -->
+                        <VBox spacing="0"
+                              style="-fx-background-color: #ffffff; -fx-background-radius: 16;
+                                     -fx-border-color: #f0f0f0; -fx-border-width: 1;
+                                     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                            <VBox style="-fx-background-color: #1a1a1a;
+                                         -fx-background-radius: 16 16 0 0;
+                                         -fx-padding: 18 22;">
+                                <Label text="Profile Picture"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #ffffff;"/>
+                            </VBox>
+                            <VBox spacing="14" style="-fx-padding: 22; -fx-alignment: CENTER;">
+
+                                <StackPane fx:id="avatarContainer"
+                                           style="-fx-min-width: 110; -fx-min-height: 110;
+                                                  -fx-max-width: 110; -fx-max-height: 110;">
+                                    <Circle fx:id="profileAvatarCircleBg" radius="55"
+                                            style="-fx-fill: #2d2d2d;"/>
+                                    <Label fx:id="profileAvatarInitialLabel" text="A"
+                                           style="-fx-font-size: 40px; -fx-font-weight: bold;
+                                                  -fx-text-fill: #ffffff;"/>
+                                    <ImageView fx:id="profileAvatarImageView"
+                                               fitWidth="110" fitHeight="110"
+                                               preserveRatio="false" visible="false"/>
+                                </StackPane>
+
+                                <Label fx:id="profileNameDisplay" text="Administrator"
+                                       style="-fx-font-size: 15px; -fx-font-weight: bold;
+                                              -fx-text-fill: #1a1a1a;"/>
+                                <Label fx:id="profileEmailDisplay" text="—"
+                                       style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
+
+                                <Label fx:id="picErrorLabel" text=""
+                                       style="-fx-font-size: 10px; -fx-text-fill: #c62828;"
+                                       wrapText="true"/>
+
+                                <Button text="Change Picture" onAction="#handleChangePicture"
+                                        maxWidth="Infinity"
+                                        style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555;
+                                               -fx-font-size: 12px; -fx-background-radius: 8;
+                                               -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                                <Button text="Remove Picture" onAction="#handleRemovePicture"
+                                        maxWidth="Infinity"
+                                        style="-fx-background-color: #ffebee; -fx-text-fill: #c62828;
+                                               -fx-font-size: 12px; -fx-background-radius: 8;
+                                               -fx-border-color: #ffcdd2; -fx-border-width: 1;
+                                               -fx-padding: 9 16; -fx-cursor: hand;"/>
+                            </VBox>
+                        </VBox>
+
+                        <!-- Account Info Card -->
+                        <VBox spacing="0"
+                              style="-fx-background-color: #ffffff; -fx-background-radius: 16;
+                                     -fx-border-color: #f0f0f0; -fx-border-width: 1;
+                                     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                            <VBox style="-fx-background-color: #1a1a1a;
+                                         -fx-background-radius: 16 16 0 0;
+                                         -fx-padding: 18 22;">
+                                <Label text="Account Info"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #ffffff;"/>
+                            </VBox>
+                            <VBox spacing="14" style="-fx-padding: 20 22;">
+                                <HBox alignment="CENTER_LEFT">
+                                    <Label text="Account Status"
+                                           style="-fx-font-size: 12px; -fx-text-fill: #777777;"
+                                           HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="statusBadge" text="Active"
+                                           style="-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;
+                                                  -fx-font-size: 10px; -fx-font-weight: bold;
+                                                  -fx-background-radius: 20; -fx-padding: 3 10;"/>
+                                </HBox>
+                                <Separator style="-fx-opacity: 0.15;"/>
+                                <HBox alignment="CENTER_LEFT">
+                                    <Label text="Role"
+                                           style="-fx-font-size: 12px; -fx-text-fill: #777777;"
+                                           HBox.hgrow="ALWAYS"/>
+                                    <Label fx:id="roleBadge" text="Admin"
+                                           style="-fx-background-color: #e3f2fd; -fx-text-fill: #1565c0;
+                                                  -fx-font-size: 10px; -fx-font-weight: bold;
+                                                  -fx-background-radius: 20; -fx-padding: 3 10;"/>
+                                </HBox>
+                                <Separator style="-fx-opacity: 0.15;"/>
+                                <VBox spacing="4">
+                                    <Label text="Member Since"
+                                           style="-fx-font-size: 12px; -fx-text-fill: #777777;"/>
+                                    <Label fx:id="memberSinceLabel" text="—"
+                                           style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
+                                </VBox>
+                            </VBox>
+                        </VBox>
+                    </VBox>
+
+                    <!-- Right Panel -->
+                    <VBox spacing="16" HBox.hgrow="ALWAYS">
+
+                        <!-- Personal Information Card -->
+                        <VBox spacing="0"
+                              style="-fx-background-color: #ffffff; -fx-background-radius: 16;
+                                     -fx-border-color: #f0f0f0; -fx-border-width: 1;
+                                     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                            <HBox style="-fx-background-color: #1a1a1a;
+                                         -fx-background-radius: 16 16 0 0;
+                                         -fx-padding: 18 22; -fx-alignment: CENTER_LEFT;">
+                                <Label text="Personal Information"
+                                       style="-fx-font-size: 13px; -fx-font-weight: bold;
+                                              -fx-text-fill: #ffffff;" HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="editToggleBtn" text="Edit"
+                                        onAction="#handleEditToggle"
+                                        style="-fx-background-color: #3d3d3d; -fx-text-fill: #ffffff;
+                                               -fx-font-size: 11px; -fx-background-radius: 6;
+                                               -fx-padding: 6 16; -fx-cursor: hand;"/>
+                            </HBox>
+
+                            <VBox spacing="18" style="-fx-padding: 24;">
+
+                                <!-- Row 1: Full Name + Email -->
+                                <HBox spacing="16">
+                                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                        <Label text="FULL NAME"
+                                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;"/>
+                                        <TextField fx:id="fullNameField" maxWidth="Infinity"
+                                                   style="-fx-font-size: 13px; -fx-padding: 10 14;
+                                                          -fx-background-radius: 8; -fx-border-color: #eeeeee;
+                                                          -fx-border-width: 1; -fx-border-radius: 8;
+                                                          -fx-background-color: #f4f4f4; -fx-text-fill: #777777;"/>
+                                    </VBox>
+                                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                        <Label text="EMAIL ADDRESS"
+                                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;"/>
+                                        <TextField fx:id="emailField" maxWidth="Infinity"
+                                                   style="-fx-font-size: 13px; -fx-padding: 10 14;
+                                                          -fx-background-radius: 8; -fx-border-color: #eeeeee;
+                                                          -fx-border-width: 1; -fx-border-radius: 8;
+                                                          -fx-background-color: #f4f4f4; -fx-text-fill: #777777;"/>
+                                    </VBox>
+                                </HBox>
+
+                                <!-- Row 2: Role + Status -->
+                                <HBox spacing="16">
+                                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                        <Label text="ROLE"
+                                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;"/>
+                                        <TextField fx:id="roleField" maxWidth="Infinity"
+                                                   editable="false"
+                                                   style="-fx-font-size: 13px; -fx-padding: 10 14;
+                                                          -fx-background-radius: 8; -fx-border-color: #eeeeee;
+                                                          -fx-border-width: 1; -fx-border-radius: 8;
+                                                          -fx-background-color: #f4f4f4; -fx-text-fill: #777777;"/>
+                                    </VBox>
+                                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                        <Label text="ACCOUNT STATUS"
+                                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;"/>
+                                        <TextField fx:id="statusField" maxWidth="Infinity"
+                                                   editable="false"
+                                                   style="-fx-font-size: 13px; -fx-padding: 10 14;
+                                                          -fx-background-radius: 8; -fx-border-color: #eeeeee;
+                                                          -fx-border-width: 1; -fx-border-radius: 8;
+                                                          -fx-background-color: #f4f4f4; -fx-text-fill: #777777;"/>
+                                    </VBox>
+                                </HBox>
+
+                                <!-- Row 3: Member Since + Email Verified -->
+                                <HBox spacing="16">
+                                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                        <Label text="MEMBER SINCE"
+                                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;"/>
+                                        <TextField fx:id="memberSinceField" maxWidth="Infinity"
+                                                   editable="false"
+                                                   style="-fx-font-size: 13px; -fx-padding: 10 14;
+                                                          -fx-background-radius: 8; -fx-border-color: #eeeeee;
+                                                          -fx-border-width: 1; -fx-border-radius: 8;
+                                                          -fx-background-color: #f4f4f4; -fx-text-fill: #777777;"/>
+                                    </VBox>
+                                    <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                        <Label text="EMAIL VERIFIED"
+                                               style="-fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #999999;"/>
+                                        <TextField maxWidth="Infinity" editable="false"
+                                                   text="Verified ✅"
+                                                   style="-fx-font-size: 13px; -fx-padding: 10 14;
+                                                          -fx-background-radius: 8; -fx-border-color: #eeeeee;
+                                                          -fx-border-width: 1; -fx-border-radius: 8;
+                                                          -fx-background-color: #f4f4f4; -fx-text-fill: #777777;"/>
+                                    </VBox>
+                                </HBox>
+
+                                <Label fx:id="profileErrorLabel" text=""
+                                       style="-fx-font-size: 11px;"/>
+
+                                <!-- Save/Cancel buttons -->
+                                <HBox fx:id="saveButtonRow" spacing="12"
+                                      visible="false" managed="false">
+                                    <Button text="Save Changes" onAction="#handleSaveProfile"
+                                            style="-fx-background-color: #1a1a1a; -fx-text-fill: #ffffff;
+                                                   -fx-font-size: 13px; -fx-font-weight: bold;
+                                                   -fx-background-radius: 10; -fx-padding: 12 28; -fx-cursor: hand;"/>
+                                    <Button text="Cancel" onAction="#handleCancelEdit"
+                                            style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555;
+                                                   -fx-font-size: 13px; -fx-background-radius: 10;
+                                                   -fx-border-color: #e0e0e0; -fx-border-width: 1;
+                                                   -fx-padding: 12 28; -fx-cursor: hand;"/>
+                                </HBox>
+                            </VBox>
+                        </VBox>
+
+                    </VBox>
+                </HBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>
