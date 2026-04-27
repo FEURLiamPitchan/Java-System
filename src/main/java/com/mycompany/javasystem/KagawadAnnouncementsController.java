@@ -763,7 +763,7 @@ public class KagawadAnnouncementsController {
             "document".equals(type)  ? "→  Go to Documents"  : "→  Go to Announcements";
         String goToFxml =
             "complaint".equals(type) ? "KagawadComplaints.fxml" :
-            "payment".equals(type)   ? "KagawadPayments.fxml"   :
+            "payment".equals(type)   ? "KagawadDocuments.fxml"  :
             "document".equals(type)  ? "KagawadDocuments.fxml"  : "KagawadAnnouncements.fxml";
 
         Button goToBtn = new Button(goToLabel);
@@ -831,7 +831,7 @@ public class KagawadAnnouncementsController {
     }
     @FXML private void goToPayments() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
-        SceneTransition.slideTo(stage, "KagawadPayments.fxml", true, getClass());
+        SceneTransition.slideTo(stage, "KagawadDocuments.fxml", true, getClass());
     }
     @FXML private void goToArchive() {
         // RBAC: Payments — Read-Only for Kagawad; archive management not permitted

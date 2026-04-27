@@ -145,7 +145,7 @@ public class Kagawad_SettingsController {
 
     @FXML private void goToPayments() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
-        SceneTransition.slideTo(stage, "KagawadPayments.fxml", true, getClass());
+        SceneTransition.slideTo(stage, "KagawadDocuments.fxml", true, getClass());
     }
 
     @FXML private void goToArchive() {

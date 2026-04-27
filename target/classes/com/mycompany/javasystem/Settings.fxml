@@ -121,13 +121,6 @@
                            -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
-            <Button text="💳   Payments" maxWidth="Infinity"
-                    onAction="#goToPayments" focusTraversable="false"
-                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
-                           -fx-font-size: 13px; -fx-background-radius: 8;
-                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
-                <VBox.margin><Insets bottom="4"/></VBox.margin>
-            </Button>
             <Button text="    📁   Archive" maxWidth="Infinity"
                     onAction="#goToArchive" focusTraversable="false"
                     style="-fx-background-color: transparent; -fx-text-fill: #777777;

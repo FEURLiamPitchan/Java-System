@@ -809,7 +809,7 @@ public class ProfileController {
                                          "→  Go to Announcements";
         String goToFxml =
             "complaint".equals(type)   ? "KagawadComplaints.fxml" :
-            "payment".equals(type)     ? "KagawadPayments.fxml"   :
+            "payment".equals(type)     ? "KagawadDocuments.fxml"  :
                                          "KagawadAnnouncements.fxml";
 
         Button goToBtn = new Button(goToLabel);
@@ -897,11 +897,11 @@ public class ProfileController {
     }
     @FXML private void goToPayments() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
-        SceneTransition.slideTo(stage, "KagawadPayments.fxml", true, getClass());
+        SceneTransition.slideTo(stage, "KagawadDocuments.fxml", true, getClass());
     }
     @FXML private void goToArchive() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
-        SceneTransition.slideTo(stage, "PaymentArchive.fxml", true, getClass());
+        SceneTransition.slideTo(stage, "KagawadDocuments.fxml", true, getClass());
     }
     @FXML private void goToComplaints() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();

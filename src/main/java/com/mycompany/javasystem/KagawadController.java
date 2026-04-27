@@ -2077,7 +2077,7 @@ private void loadLogs(TableView<String[]> table, Label recordCount, LocalDate fr
     }
     @FXML private void goToArchive() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();
-        SceneTransition.slideTo(stage, "PaymentArchive.fxml", true, getClass());
+        SceneTransition.slideTo(stage, "Documents.fxml", true, getClass());
     }
     @FXML private void goToComplaints() {
         Stage stage = (Stage) logoutButton.getScene().getWindow();

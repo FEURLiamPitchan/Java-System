@@ -122,13 +122,6 @@
                            -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
                 <VBox.margin><Insets bottom="4"/></VBox.margin>
             </Button>
-            <Button text="💳   Payments" maxWidth="Infinity"
-                    onAction="#goToPayments" focusTraversable="false"
-                    style="-fx-background-color: transparent; -fx-text-fill: #555555;
-                           -fx-font-size: 13px; -fx-background-radius: 8;
-                           -fx-padding: 11 16; -fx-alignment: CENTER_LEFT; -fx-cursor: hand;">
-                <VBox.margin><Insets bottom="4"/></VBox.margin>
-            </Button>
             <Region prefHeight="12"/>
 
             <Label text="COMMUNITY"
@@ -352,10 +345,10 @@
                             <VBox HBox.hgrow="ALWAYS" spacing="3">
                                 <Label text="Recent Requests"
                                        style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #1a1a1a;"/>
-                                <Label text="Payments &amp; Document requests"
+                                <Label text="Document requests"
                                        style="-fx-font-size: 11px; -fx-text-fill: #aaaaaa;"/>
                             </VBox>
-                            <Button text="View All" onAction="#goToPayments"
+                            <Button text="View All" onAction="#goToDocuments"
                                     style="-fx-background-color: #f4f4f4; -fx-text-fill: #555555;
                                            -fx-font-size: 11px; -fx-background-radius: 6;
                                            -fx-border-color: #e0e0e0; -fx-border-width: 1;
